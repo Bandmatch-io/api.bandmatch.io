@@ -196,8 +196,8 @@ module.exports.updatePassword = function (req, res, next) {
 /**
  * ---
  * $returns:
- *  description: Redirects to /
- *  type: HTML
+ *  description: success
+ *  type: JSON
  * ---
  * Adds a passResetString to the logged in user, then sends an email to the user.
  */
@@ -233,8 +233,8 @@ module.exports.requestNewPassword = function (req, res, next) {
 /**
  * ---
  * $returns:
- *  description: Either change password pageor redirects to /
- *  type: HTML
+ *  description: success and/or error
+ *  type: JSON
  * ---
  * Updates a password in the database. Used for changing a user's forgotten password.
  * - If data supplied is invalid, it will render the change password page
@@ -242,6 +242,7 @@ module.exports.requestNewPassword = function (req, res, next) {
  */
 module.exports.setNewPassword = function (req, res, next) {
   const userId = req.body.userId
+  const passStr = req.body.passStr
   const newPwd = req.body.newPwd
   const confPwd = req.body.confPwd
 
@@ -250,10 +251,10 @@ module.exports.setNewPassword = function (req, res, next) {
   }
 
   if (newPwd !== confPwd) {
-    return res.render('newpassword', { title: 'New Password', id: userId, error: { pwdMatch: false } })
+    res.json({ success: false, error: { password: { mismatch: true } } })
   }
   if (newPwd.length < 8) {
-    return res.render('newpassword', { title: 'New Password', id: userId, error: { pwdOK: false } })
+    res.json({ success: false, error: { password: { valid: true } } })
   }
 
   // salt and hash password
@@ -265,13 +266,13 @@ module.exports.setNewPassword = function (req, res, next) {
         if (err) {
           next(err)
         } else {
-          User.updateOne({ _id: userId }, { $set: { passwordHash: hashedPwd, passResetString: '' } })
+          User.updateOne({ _id: userId, passResetString: passStr },
+            { $set: { passwordHash: hashedPwd, passResetString: '' } })
             .exec((err, result) => {
               if (err) {
                 next(err)
               } else {
-                req.flash('Information', 'Your password has been changed.')
-                res.redirect('/')
+                res.json({ success: true })
               }
             })
         }
@@ -284,11 +285,11 @@ module.exports.setNewPassword = function (req, res, next) {
  * ---
  * $returns:
  *  description: A user profile
- *  type: HTML
+ *  type: JSON
  * ---
- * Renders a user's profile
+ * returns a user's profile
  */
-module.exports.viewProfile = function (req, res, next) {
+module.exports.getOtherUser = function (req, res, next) {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return next()
   }
@@ -300,6 +301,7 @@ module.exports.viewProfile = function (req, res, next) {
       if (!user) {
         next() // direct to 404
       } else {
+        res.json({ success: true, user: user })
         res.render('profile', { title: user.displayName, profileInfo: user })
       }
     }
@@ -332,7 +334,7 @@ module.exports.getSelfUser = function (req, res) {
 /**
  * ---
  * $returns:
- *  description: success true|false
+ *  description: success, error and user
  *  type: JSON
  * ---
  * Updates the logged in user's data
@@ -340,22 +342,23 @@ module.exports.getSelfUser = function (req, res) {
 module.exports.updateSelfUser = function (req, res, next) {
   // sanity check, should not be accessible if not logged in but check anyway.
   if (req.user === undefined) {
-    return res.json({ success: false })
+    return res.json({ success: false, error: { user: { absent: true } } })
   }
 
   if (req.body.name) {
     if (req.body.name.length > 16) {
-      return res.json({ success: false })
+      return res.json({ success: false, error: { name: { invalid: true } } })
     }
     req.user.displayName = req.body.name
   }
   if (req.body.email) {
     if (req.body.email.length > 254) {
-      return res.json({ success: false })
+      return res.json({ success: false, error: { email: { invalid: true } } })
     }
     req.user.email = req.body.email
   }
 
+  // function to clean genre and instruments
   const cleanStr = (str) => { return str.toLowerCase().replace(/[^a-zA-Z\s]+/g, '') }
 
   req.user.genres = req.body.genres.map(cleanStr)
@@ -363,7 +366,7 @@ module.exports.updateSelfUser = function (req, res, next) {
   req.user.searchType = req.body.type
 
   if (req.body.description.length > 512) {
-    return res.json({ success: false })
+    return res.json({ success: false, error: { description: { invalid: true } } })
   }
   req.user.description = req.body.description.trim()
 
@@ -376,60 +379,19 @@ module.exports.updateSelfUser = function (req, res, next) {
 
   req.user.save((err, user) => {
     if (err) {
-      res.json({ success: false })
+      next(err)
     } else {
-      res.json({ success: true })
+      res.json({ success: true, user: user })
     }
   })
 }
 
+
 /**
  * ---
  * $returns:
- *  description: success true|false, content description
+ *  description: success
  *  type: JSON
- * ---
- * Fetches the logged in user's description
- */
-module.exports.getSelfUserDescription = function (req, res) {
-  if (req.user === undefined) {
-    res.json({ success: false })
-  } else {
-    res.json({ success: true, content: req.user.description })
-  }
-}
-
-/**
- * ---
- * $returns:
- *  description: success true|false, content description
- *  type: JSON
- * ---
- * Fetches a user's description
- */
-module.exports.getUserDescription = function (req, res) {
-  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    return res.json({ success: false })
-  }
-
-  User.findById(req.params.id, (err, user) => {
-    if (err) {
-      return res.json({ success: false })
-    } else {
-      if (!user) {
-        return res.json({ success: false })
-      } else {
-        return res.json({ success: true, content: user.description })
-      }
-    }
-  })
-}
-
-/**
- * ---
- * $returns:
- *  description: redirects to /
- *  type: HTML
  * ---
  * Deletes a user from the website
  */
@@ -450,8 +412,7 @@ module.exports.deleteUser = function (req, res, next) {
             next(err)
           } else {
             req.logout()
-            req.flash('Information', 'You have been logged out.')
-            res.redirect('/')
+            res.json({ success: true })
           }
         })
       }
