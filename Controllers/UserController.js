@@ -1,23 +1,44 @@
-const User = require('../Database/Models/User')
-const bcrypt = require('bcrypt')
-const mongoose = require('mongoose')
-const crs = require('crypto-random-string')
-const MailController = require('./MailController')
-const MessageController = require('./MessageController')
+var User = require('../Database/Models/User')
+var bcrypt = require('bcrypt')
+var mongoose = require('mongoose')
+var crs = require('crypto-random-string')
+var MailController = require('./MailController')
+var MessageController = require('./MessageController')
 
+// Changing this will result in people not being able to log into the system.
+// Should be in config, but the opportunity has passed.
 const saltRounds = 10
 
 /**
  * ---
- * recaptcha: The recaptcha instance that will be passed onto the page.
  * $returns:
- *  description: Renders the signin page, or redirects to /
- *  type: HTML / Redirect
+ *  description: success true or false, error and user
+ *  type: JSON
  * ---
  * Creates a user in the database.
  * emails will be turned lowercase.
+ * response takes the form, but only error or user will be present
+ * ``` javascript
+ * {
+ *    success: true|false,
+ *    error: {
+ *      email: {
+ *        invalid: true,
+ *        inUse: true
+ *      },
+ *      consent: {
+ *        missing: true
+ *      },
+ *      password: {
+ *        invalid: true,
+ *        mismatchL true
+ *      }
+ *    },
+ *    user: [User object]
+ * }
+ * ```
  */
-module.exports.createUser = function (req, res, next, recaptcha) {
+module.exports.createUser = function (req, res, next) {
   const email = req.body.email.toLowerCase()
   const name = req.body.name
   const pwd = req.body.pass
@@ -25,23 +46,23 @@ module.exports.createUser = function (req, res, next, recaptcha) {
   const agreement = req.body.agreement
 
   if (!agreement) {
-    return res.render('signin', { title: 'Sign in', error: { consent: false }, captcha: recaptcha.render() })
+    return res.json({ success: false, error: { consent: { missing: true } } })
   }
 
   // Validate fields
   if (email.length > 254) {
-    return res.render('signin', { title: 'Sign in', error: { emailLength: false }, captcha: recaptcha.render() })
+    return res.json({ success: false, error: { email: { invalid: true } } })
   }
 
   if (name.length > 16) {
-    return res.render('signin', { title: 'Sign in', error: { nameOK: false }, captcha: recaptcha.render() })
+    return res.json({ success: false, error: { name: { invalid: true } } })
   }
 
   if (pwd !== confPwd) {
-    return res.render('signin', { title: 'Sign in', error: { pwdMatch: false }, captcha: recaptcha.render() })
+    return res.json({ success: false, error: { password: { mismatch: true } } })
   }
   if (pwd.length < 8) {
-    return res.render('signin', { title: 'Sign in', error: { pwdOK: false }, captcha: recaptcha.render() })
+    return res.json({ success: false, error: { password: { invalid: true } } })
   }
 
   // Check the email isn't already in use.
@@ -51,7 +72,7 @@ module.exports.createUser = function (req, res, next, recaptcha) {
     } else {
       // If the emails is in use, direct back to sign in page.
       if (user !== null) {
-        res.render('signin', { title: 'Sign in', error: { emailOK: false }, captcha: recaptcha.render() })
+        res.json({ success: false, error: { email: { inUse: true } } })
       } else {
         // salt and hash password
         bcrypt.genSalt(saltRounds, (err, salt) => {
@@ -72,14 +93,17 @@ module.exports.createUser = function (req, res, next, recaptcha) {
 
                 user.save((err, user) => {
                   if (err) {
-                    res.render('signin', { title: 'Sign in', error: {}, captcha: recaptcha.render() })
+                    next(err)
                   } else {
                     // Send new user email, don't care if it errs
                     MailController.sendNewUserEmail(user.email, user.confirmString, () => {
                       // After saving the user, log in and redirect to profile setup
                       req.login(user, (liErr) => {
-                        req.flash('Information', 'Account created.')
-                        res.redirect('/users/profile/setup')
+                        if (liErr) {
+                          next(liErr)
+                        } else {
+                          res.json({ success: true, user: user })
+                        }
                       })
                     })
                   }
@@ -96,10 +120,10 @@ module.exports.createUser = function (req, res, next, recaptcha) {
 /**
  * ---
  * $returns:
- *  description: Redirects to /
- *  type: Redirect
+ *  description: success true|false
+ *  type: JSON
  * ---
- * Validates a user in the db.
+ * Validates a user's email in the db.
  */
 module.exports.confirmEmailAddress = function (req, res, next) {
   // sets the email address to confirmed if correct string is provded for logged in user
@@ -109,8 +133,7 @@ module.exports.confirmEmailAddress = function (req, res, next) {
       if (err) {
         next(err)
       } else {
-        req.flash('Information', 'Your email has been confirmed.')
-        res.redirect('/')
+        res.json({ success: true })
       }
     })
 }
@@ -118,45 +141,12 @@ module.exports.confirmEmailAddress = function (req, res, next) {
 /**
  * ---
  * $returns:
- *  description: Rendered HTML for profile edit page.
- *  type: HTML
- * ---
- */
-module.exports.viewSelfProfile = function (req, res) {
-  res.render('profileedit', { title: req.user.displayName, user: req.user })
-}
-
-/**
- * ---
- * $returns:
- *  description: Rendered HTML for profile setup page.
- *  type: HTML
- * ---
- */
-module.exports.viewProfileSetup = function (req, res) {
-  res.render('profilesetup', { title: 'Profile Setup', error: {} })
-}
-
-/**
- * ---
- * $returns:
- *  description: Renders change password page.
- *  type: HTML
- * ---
- */
-module.exports.viewChangePassword = function (req, res) {
-  res.render('changepassword', { title: 'Change Password' })
-}
-
-/**
- * ---
- * $returns:
- *  description: Either change password pageor redirects to /
- *  type: HTML
+ *  description: success and/or error
+ *  type: JSON
  * ---
  * Updates a password in the database. Used for changing a user's existing password.
- * - If data supplied is invalid, it will render the change password page
- * - If data is valid it will redirect to /users/profile/self
+ * - If data supplied is invalid, it will return no success and an error
+ * - If data is valid it will return success
  */
 module.exports.updatePassword = function (req, res, next) {
   const oldPwd = req.body.oldPwd
@@ -164,10 +154,10 @@ module.exports.updatePassword = function (req, res, next) {
   const confPwd = req.body.confPwd
 
   if (newPwd !== confPwd) {
-    return res.render('changepassword', { title: 'Change Password', error: { pwdMatch: false } })
+    return res.json({ success: false, error: { password: { mismatch: true } } })
   }
   if (newPwd.length < 8) {
-    return res.render('changepassword', { title: 'Change Password', error: { pwdOK: false } })
+    return res.json({ success: false, error: { password: { invalid: true } } })
   }
 
   bcrypt.compare(oldPwd, req.user.passwordHash, (err, result) => {
@@ -189,8 +179,7 @@ module.exports.updatePassword = function (req, res, next) {
                     if (err) {
                       next(err)
                     } else {
-                      req.flash('Information', 'Your password has been changed.')
-                      res.redirect('/users/profile/self')
+                      return res.json({ success: true })
                     }
                   })
               }
@@ -198,7 +187,7 @@ module.exports.updatePassword = function (req, res, next) {
           }
         })
       } else {
-        return res.render('changepassword', { title: 'Change Password', error: { oldPwdOk: false } })
+        return res.json({ success: false, error: { password: { incorrect: true } } })
       }
     }
   })
@@ -213,7 +202,11 @@ module.exports.updatePassword = function (req, res, next) {
  * Adds a passResetString to the logged in user, then sends an email to the user.
  */
 module.exports.requestNewPassword = function (req, res, next) {
-  const email = req.body.email
+  const email = req.params.email
+
+  if (email === undefined) {
+    res.json({ success: false, error: { email: { absent: true } } })
+  }
 
   const str = crs({ length: 32, type: 'url-safe' })
   User.updateOne({ email: email },
@@ -226,42 +219,12 @@ module.exports.requestNewPassword = function (req, res, next) {
           MailController.sendRequestPassEmail(email, str, () => {
             if (err) {
               next(err)
+            } else {
+              res.json({ success: true })
             }
-            res.redirect('/')
           })
         } else {
-          res.redirect('/')
-        }
-      }
-    })
-}
-
-/**
- * ---
- * $returns:
- *  description: The new password page
- *  type: html
- * ---
- * Renders the new password page, used for forgotten passwords.
- */
-module.exports.viewNewPassword = function (req, res, next) {
-  const str = req.query.s
-
-  // Make sure that a blank string redirects to nothing
-  if (str === undefined) {
-    return next()
-  }
-
-  User.findOne({ passResetString: str })
-    .select('_id displayName email')
-    .exec((err, user) => {
-      if (err) {
-        next(err)
-      } else {
-        if (user) {
-          res.render('newpassword', { title: 'New Password', user: user })
-        } else {
-          next()
+          res.json({ success: false })
         }
       }
     })
