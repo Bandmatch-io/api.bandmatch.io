@@ -345,7 +345,7 @@ module.exports.getSelfUser = function (req, res) {
 module.exports.updateSelfUser = function (req, res, next) {
   // sanity check, should not be accessible if not logged in but check anyway.
   if (req.user === undefined) {
-    return res.json({ success: false, error: { user: { absent: true } } })
+    return res.json({ success: false, error: { login: { absent: true } } })
   }
 
   if (req.body.name) {
@@ -354,27 +354,44 @@ module.exports.updateSelfUser = function (req, res, next) {
     }
     req.user.displayName = req.body.name
   }
-  if (req.body.email) {
-    if (req.body.email.length > 254) {
-      return res.json({ success: false, error: { email: { invalid: true } } })
-    }
-    req.user.email = req.body.email
-  }
 
   // function to clean genre and instruments
   const cleanStr = (str) => { return str.toLowerCase().replace(/[^a-zA-Z\s]+/g, '') }
 
-  req.user.genres = req.body.genres.map(cleanStr)
-  req.user.instruments = req.body.instruments.map(cleanStr)
-  req.user.searchType = req.body.type
-
-  if (req.body.description.length > 512) {
-    return res.json({ success: false, error: { description: { invalid: true } } })
+  if (req.body.genres) {
+    req.user.genres = req.body.genres.map(cleanStr)
   }
-  req.user.description = req.body.description.trim()
 
-  req.user.searchRadius = req.body.radius
-  req.user.searchLocation.coordinates = [req.body.location.lng, req.body.location.lat]
+  if (req.body.instruments) {
+    req.user.instruments = req.body.instruments.map(cleanStr)
+  }
+
+  if (req.body.type) {
+    if (req.body.type === 'Form' || req.body.type === 'Join' ||
+      req.body.type === 'Either' || req.body.type === 'Recruit') {
+      req.user.searchType = req.body.type
+    } else {
+      return res.json({ success: false, error: { type: { invalid: true } } })
+    }
+  }
+
+  if (req.body.description) {
+    if (req.body.description.length > 512) {
+      return res.json({ success: false, error: { description: { invalid: true } } })
+    }
+    req.user.description = req.body.description.trim()
+  }
+
+  if (req.body.radius) {
+    if (req.body.radius < 0) {
+      return res.json({ success: false, error: { radius: { negative: true } } })
+    }
+    req.user.searchRadius = req.body.radius
+  }
+
+  if (req.body.location) {
+    req.user.searchLocation.coordinates = [req.body.location.lng, req.body.location.lat]
+  }
 
   if (req.body.active !== undefined) {
     req.user.active = req.body.active
@@ -384,7 +401,19 @@ module.exports.updateSelfUser = function (req, res, next) {
     if (err) {
       next(err)
     } else {
-      res.json({ success: true, user: user })
+      const selectedUser = {
+        displayName: req.user.displayName,
+        email: req.user.email,
+        genres: req.user.genres,
+        instruments: req.user.instruments,
+        active: req.user.active,
+        description: req.user.description,
+        searchRadius: req.user.searchRadius,
+        searchLocation: req.user.searchLocation,
+        searchType: req.user.searchType
+      }
+
+      res.json({ success: true, user: selectedUser })
     }
   })
 }
