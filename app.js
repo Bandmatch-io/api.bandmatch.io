@@ -11,9 +11,9 @@ var airbrake = require('./bin/airbrake')()
 var passport = require('./bin/passport')()
 
 var usersRouter = require('./routes/users')(passport)
-var conversationsRouter = require('./routes/conversations')
-var reportsRouter = require('./routes/reports')
-var adminRouter = require('./routes/admin/index')
+var conversationsRouter = require('./routes/conversations')()
+var reportsRouter = require('./routes/reports')()
+var adminRouter = require('./routes/admin/index')()
 
 var app = express()
 

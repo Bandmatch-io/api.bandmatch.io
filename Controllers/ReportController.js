@@ -16,20 +16,28 @@ module.exports.createReport = function (req, res, next) {
   const reason = req.body.reason
 
   // Check that all required fields are present
-  if (target === undefined || reason === undefined) {
-    return res.json({ success: false })
+  if (target === undefined) {
+    res.status(400)
+    return res.json({ success: false, error: { target: { absent: true } } })
+  }
+
+  if (reason === undefined) {
+    res.status(400)
+    return res.json({ success: false, error: { reason: { absent: true } } })
   }
 
   // Check given ids are valid
   if (reportedConversation !== undefined) {
     if (!mongoose.Types.ObjectId.isValid(reportedConversation)) {
-      return res.json({ success: false })
+      res.status(400)
+      return res.json({ success: false, error: { reportedConversation: { invalid: true } } })
     }
   }
 
   if (reportedUser !== undefined) {
     if (!mongoose.Types.ObjectId.isValid(reportedUser)) {
-      return res.json({ success: false })
+      res.status(400)
+      return res.json({ success: false, error: { reportedUser: { invalid: true } }  })
     }
   }
 
@@ -42,7 +50,7 @@ module.exports.createReport = function (req, res, next) {
 
   report.save((err, report) => {
     if (err) {
-      res.json({ success: false })
+      next(err)
     } else {
       res.json({ success: true })
     }

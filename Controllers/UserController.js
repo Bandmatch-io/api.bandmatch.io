@@ -69,22 +69,27 @@ module.exports.createUser = function (req, res, next) {
   const agreement = req.body.agreement
 
   if (!agreement) {
+    res.status(400)
     return res.json({ success: false, error: { consent: { missing: true } } })
   }
 
   // Validate fields
   if (email.length > 254) {
+    res.status(400)
     return res.json({ success: false, error: { email: { invalid: true } } })
   }
 
   if (name.length > 16) {
+    res.status(400)
     return res.json({ success: false, error: { name: { invalid: true } } })
   }
 
   if (pwd !== confPwd) {
+    res.status(400)
     return res.json({ success: false, error: { password: { mismatch: true } } })
   }
   if (pwd.length < 8) {
+    res.status(400)
     return res.json({ success: false, error: { password: { invalid: true } } })
   }
 
@@ -95,6 +100,7 @@ module.exports.createUser = function (req, res, next) {
     } else {
       // If the emails is in use, direct back to sign in page.
       if (user !== null) {
+        res.status(400)
         res.json({ success: false, error: { email: { inUse: true } } })
       } else {
         // salt and hash password
@@ -177,9 +183,11 @@ module.exports.updatePassword = function (req, res, next) {
   const confPwd = req.body.confPwd
 
   if (newPwd !== confPwd) {
+    res.status(400)
     return res.json({ success: false, error: { password: { mismatch: true } } })
   }
   if (newPwd.length < 8) {
+    res.status(400)
     return res.json({ success: false, error: { password: { invalid: true } } })
   }
 
@@ -210,6 +218,7 @@ module.exports.updatePassword = function (req, res, next) {
           }
         })
       } else {
+        res.status(400)
         return res.json({ success: false, error: { password: { incorrect: true } } })
       }
     }
@@ -228,6 +237,7 @@ module.exports.requestNewPassword = function (req, res, next) {
   const email = req.params.email
 
   if (email === undefined) {
+    res.status(400)
     res.json({ success: false, error: { email: { absent: true } } })
   }
 
@@ -247,6 +257,7 @@ module.exports.requestNewPassword = function (req, res, next) {
             }
           })
         } else {
+          res.status(400)
           res.json({ success: false })
         }
       }
@@ -274,10 +285,12 @@ module.exports.setNewPassword = function (req, res, next) {
   }
 
   if (newPwd !== confPwd) {
-    res.json({ success: false, error: { password: { mismatch: true } } })
+    res.status(400)
+    return res.json({ success: false, error: { password: { mismatch: true } } })
   }
   if (newPwd.length < 8) {
-    res.json({ success: false, error: { password: { valid: true } } })
+    res.status(400)
+    return res.json({ success: false, error: { password: { valid: true } } })
   }
 
   // salt and hash password
@@ -355,11 +368,13 @@ module.exports.getSelfUser = function (req, res) {
 module.exports.updateSelfUser = function (req, res, next) {
   // sanity check, should not be accessible if not logged in but check anyway.
   if (req.user === undefined) {
+    res.status(401)
     return res.json({ success: false, error: { login: { absent: true } } })
   }
 
   if (req.body.name) {
     if (req.body.name.length > 16) {
+      res.status(400)
       return res.json({ success: false, error: { name: { invalid: true } } })
     }
     req.user.displayName = req.body.name
@@ -381,12 +396,14 @@ module.exports.updateSelfUser = function (req, res, next) {
       req.body.type === 'Either' || req.body.type === 'Recruit') {
       req.user.searchType = req.body.type
     } else {
+      res.status(400)
       return res.json({ success: false, error: { type: { invalid: true } } })
     }
   }
 
   if (req.body.description) {
     if (req.body.description.length > 512) {
+      res.status(400)
       return res.json({ success: false, error: { description: { invalid: true } } })
     }
     req.user.description = req.body.description.trim()
@@ -394,6 +411,7 @@ module.exports.updateSelfUser = function (req, res, next) {
 
   if (req.body.radius) {
     if (req.body.radius < 0) {
+      res.status(400)
       return res.json({ success: false, error: { radius: { negative: true } } })
     }
     req.user.searchRadius = req.body.radius
