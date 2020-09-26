@@ -41,6 +41,32 @@ app.use(passport.session())
 
 app.use(airbrake.middleware)
 
+var wl = config.get('anon_whitelist')
+var StatController = require('./Controllers/StatController')
+
+app.all('*', function (req, res, next) {
+  if (req.query.ref) {
+    StatController.addReferrer(req.query.ref)
+  }
+
+  let allowThrough = false
+  wl.forEach((url) => {
+    const regex = new RegExp(url, 'g')
+    if (regex.exec(req.url.split('?')[0]) !== null) {
+      console.log(`${req.url} matched with ${url}`)
+      allowThrough = true
+    }
+  })
+  if (allowThrough) {
+    return next()
+  }
+
+  if (req.user === undefined) {
+    return res.json({ success: false, error: { login: { absent: true } } })
+  }
+  return next()
+})
+
 app.use('/users', usersRouter)
 app.use('/conversations', conversationsRouter)
 app.use('/reports', reportsRouter)

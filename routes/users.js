@@ -72,7 +72,7 @@ module.exports = (passport) => {
   /**
    * ---
    * $route:
-   *  method: POST
+   *  method: GET
    *  endpoint: /users/confirm/:str
    * $params:
    *  str: The confirm email string
@@ -82,7 +82,7 @@ module.exports = (passport) => {
    * ---
    * Renders the sign in page on invalid data
    */
-  router.patch('/confirm/:str', UserController.confirmEmailAddress)
+  router.get('/confirm/:str', UserController.confirmEmailAddress)
 
   /**
    * ---
