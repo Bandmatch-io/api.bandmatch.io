@@ -10,7 +10,7 @@ var cors = require('cors')
 var airbrake = require('./bin/airbrake')()
 var passport = require('./bin/passport')()
 
-var usersRouter = require('./routes/users')
+var usersRouter = require('./routes/users')(passport)
 var conversationsRouter = require('./routes/conversations')
 var reportsRouter = require('./routes/reports')
 var adminRouter = require('./routes/admin/index')
@@ -22,7 +22,7 @@ app.use(passport.session())
 
 app.use(compression())
 
-app.user(cors())
+app.use(cors())
 
 /**
  * Set up user sessions. Memory store for dev, mongoDB for prod

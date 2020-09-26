@@ -23,7 +23,7 @@ var userSchema = new Schema({
     }
   },
   searchRadius: { type: Number, required: true, default: 5.0 },
-  description: { type: String, maxlength: 512, default: '# This is your description' },
+  description: { type: String, maxlength: 512, default: '' },
   active: { type: Boolean, default: true },
   admin: { type: Boolean, default: false },
   emailConfirmed: { type: Boolean, default: false },

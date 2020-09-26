@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start:dev": "node ./bin/www",
+    "start:dev": "DEBUG=api.bandmatch.io:* node ./bin/www",
     "start:production": "NODE_ENV=production node bin/www",
     "init": "sh initialise.sh",
     "lint": "npx standard --fix",
@@ -13,8 +13,8 @@
     "ver:bump:patch": "standard-version",
     "ver:bump:minor": "standard-version --release-as minor",
     "ver:bump:major": "standard-version --release-as major",
-    "db:migrate:dev": "migrate-mongo up",
-    "db:rollback:dev": "migrate-mongo down",
+    "db:migrate:dev": "NODE_ENV=development migrate-mongo up",
+    "db:rollback:dev": "NODE_ENV=development migrate-mongo down",
     "db:migrate:production": "NODE_ENV=production migrate-mongo up",
     "db:rollback:production": "NODE_ENV=production migrate-mongo down",
     "db:preupdate": "migrate-mongo create"
@@ -26,6 +26,7 @@
     "compression": "^1.7.4",
     "config": "^3.3.2",
     "cookie-parser": "~1.4.4",
+    "cors": "^2.8.5",
     "crypto-random-string": "^3.3.0",
     "debug": "^2.6.9",
     "express": "~4.16.1",

@@ -45,6 +45,8 @@ module.exports.createUser = function (req, res, next) {
   const confPwd = req.body.confPass
   const agreement = req.body.agreement
 
+  console.log(req.body)
+
   if (!agreement) {
     return res.json({ success: false, error: { consent: { missing: true } } })
   }
@@ -385,7 +387,6 @@ module.exports.updateSelfUser = function (req, res, next) {
     }
   })
 }
-
 
 /**
  * ---

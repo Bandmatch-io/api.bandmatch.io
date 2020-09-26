@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer')
 const htmlToText = require('nodemailer-html-to-text').htmlToText
 const ejs = require('ejs')
-const debug = require('debug')('band-finder:mailer')
+const debug = require('debug')('api.bandmatch.io:mailer')
 const config = require('config')
 
 module.exports = (opts) => {
