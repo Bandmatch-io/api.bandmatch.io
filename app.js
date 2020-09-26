@@ -19,7 +19,13 @@ var app = express()
 
 app.use(compression())
 
-app.use(cors())
+var corsOptions = {
+  origin: 'http://localhost:3000',
+  optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
+  credentials: true
+}
+
+app.use(cors(corsOptions))
 
 /**
  * Set up user sessions. Memory store for dev, mongoDB for prod
