@@ -318,6 +318,8 @@ module.exports.getOtherUser = function (req, res, next) {
  * ---
  */
 module.exports.getSelfUser = function (req, res) {
+  console.log(req.session)
+
   // make sure we don't send password to the frontend
   const selectedUser = {
     displayName: req.user.displayName,

@@ -12,9 +12,9 @@ module.exports = (passport) => {
 
   router.post('/new', UserController.createUser)
 
-  router.get('/profile/:id', UserController.getOtherUser)
-
   router.get('/profile', UserController.getSelfUser)
+
+  router.get('/profile/:id', UserController.getOtherUser)
 
   router.patch('/profile', UserController.updateSelfUser)
 
@@ -117,7 +117,7 @@ module.exports = (passport) => {
       }
 
       // log in and increment logins stat
-      req.logIn(user, function (err) {
+      req.login(user, function (err) {
         if (err) {
           return next(err)
         }
