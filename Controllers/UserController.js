@@ -45,8 +45,6 @@ module.exports.createUser = function (req, res, next) {
   const confPwd = req.body.confPass
   const agreement = req.body.agreement
 
-  console.log(req.body)
-
   if (!agreement) {
     return res.json({ success: false, error: { consent: { missing: true } } })
   }
@@ -296,18 +294,19 @@ module.exports.getOtherUser = function (req, res, next) {
     return next()
   }
 
-  User.findById(req.params.id, (err, user) => {
-    if (err) {
-      next(err)
-    } else {
-      if (!user) {
-        next() // direct to 404
+  User.findById(req.params.id)
+    .select('-passwordHash -confirmString ')
+    .exec((err, user) => {
+      if (err) {
+        next(err)
       } else {
-        res.json({ success: true, user: user })
-        res.render('profile', { title: user.displayName, profileInfo: user })
+        if (!user) {
+          next() // direct to 404
+        } else {
+          res.json({ success: true, user: user })
+        }
       }
-    }
-  })
+    })
 }
 
 /**
