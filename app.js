@@ -5,6 +5,7 @@ var logger = require('morgan')
 var debug = require('debug')('band-match:api')
 var compression = require('compression')
 var config = require('config')
+var cors = require('cors')
 
 var airbrake = require('./bin/airbrake')()
 var passport = require('./bin/passport')()
@@ -20,6 +21,8 @@ app.use(passport.initialize())
 app.use(passport.session())
 
 app.use(compression())
+
+app.user(cors())
 
 /**
  * Set up user sessions. Memory store for dev, mongoDB for prod
