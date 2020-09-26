@@ -24,6 +24,19 @@ module.exports = (passport) => {
 
   router.patch('/password/:str', UserController.setNewPassword)
 
+  /**
+   * ---
+   * $route:
+   *  method: POST
+   *  endpoint: /users/block/:id
+   * $params:
+   *  The id of the user to block.
+   * $returns:
+   *  description: success
+   *  type: JSON
+   * ---
+   * Adds a user to a blocked list
+   */
   router.delete('/', UserController.deleteUser)
 
   /**
@@ -126,7 +139,11 @@ module.exports = (passport) => {
           // only incremement stat if user is non-admin
           StatController.incrementStat('logins')
         }
-        res.json({ success: true, user: user })
+        if (user) {
+          res.json({ success: true, user: UserController.sanitiseUser(user) })
+        } else {
+          res.json({ succes: false, error: { credentials: { missing: true } } })
+        }
       })
     })(req, res, next)
   })

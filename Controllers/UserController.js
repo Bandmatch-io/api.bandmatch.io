@@ -11,6 +11,29 @@ const saltRounds = 10
 
 /**
  * ---
+ * user: The user to sanitise
+ * $returns: The sanitised user
+ * ---
+ * Sanitises a user object.
+ */
+const sanitiseUser = function (user) {
+  return {
+    _id: user._id,
+    displayName: user.displayName,
+    email: user.email,
+    genres: user.genres,
+    instruments: user.instruments,
+    active: user.active,
+    description: user.description,
+    searchRadius: user.searchRadius,
+    searchLocation: user.searchLocation,
+    searchType: user.searchType
+  }
+}
+module.exports.sanitiseUser = sanitiseUser
+
+/**
+ * ---
  * $returns:
  *  description: success true or false, error and user
  *  type: JSON
@@ -102,7 +125,7 @@ module.exports.createUser = function (req, res, next) {
                         if (liErr) {
                           next(liErr)
                         } else {
-                          res.json({ success: true, user: user })
+                          res.json({ success: true, user: sanitiseUser(user) })
                         }
                       })
                     })
@@ -303,7 +326,7 @@ module.exports.getOtherUser = function (req, res, next) {
         if (!user) {
           next() // direct to 404
         } else {
-          res.json({ success: true, user: user })
+          res.json({ success: true, user: sanitiseUser(user) })
         }
       }
     })
@@ -317,21 +340,8 @@ module.exports.getOtherUser = function (req, res, next) {
  * ---
  */
 module.exports.getSelfUser = function (req, res) {
-  console.log(req.session)
 
-  // make sure we don't send password to the frontend
-  const selectedUser = {
-    displayName: req.user.displayName,
-    email: req.user.email,
-    genres: req.user.genres,
-    instruments: req.user.instruments,
-    active: req.user.active,
-    description: req.user.description,
-    searchRadius: req.user.searchRadius,
-    searchLocation: req.user.searchLocation,
-    searchType: req.user.searchType
-  }
-  res.json({ user: selectedUser })
+  res.json({ user: sanitiseUser(req.user) })
 }
 
 /**
@@ -401,19 +411,7 @@ module.exports.updateSelfUser = function (req, res, next) {
     if (err) {
       next(err)
     } else {
-      const selectedUser = {
-        displayName: req.user.displayName,
-        email: req.user.email,
-        genres: req.user.genres,
-        instruments: req.user.instruments,
-        active: req.user.active,
-        description: req.user.description,
-        searchRadius: req.user.searchRadius,
-        searchLocation: req.user.searchLocation,
-        searchType: req.user.searchType
-      }
-
-      res.json({ success: true, user: selectedUser })
+      res.json({ success: true, user: sanitiseUser(user) })
     }
   })
 }

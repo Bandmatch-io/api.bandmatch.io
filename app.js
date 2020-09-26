@@ -53,7 +53,6 @@ app.all('*', function (req, res, next) {
   wl.forEach((url) => {
     const regex = new RegExp(url, 'g')
     if (regex.exec(req.url.split('?')[0]) !== null) {
-      console.log(`${req.url} matched with ${url}`)
       allowThrough = true
     }
   })
@@ -62,6 +61,7 @@ app.all('*', function (req, res, next) {
   }
 
   if (req.user === undefined) {
+    res.status(401)
     return res.json({ success: false, error: { login: { absent: true } } })
   }
   return next()

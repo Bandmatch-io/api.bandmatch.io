@@ -19,18 +19,11 @@ module.exports = () => {
       }
       bcrypt.compare(password, user.passwordHash, (err, result) => {
 
-        const sanitisedUser = {
-          displayName: user.displayName,
-          email: user.email,
-          _id: user._id,
-          admin: user.admin
-        }
-
         if (err) {
           return done(err)
         } else {
           if (result === true) {
-            return done(null, sanitisedUser) // needs full user, not just id for serialize/deserialize
+            return done(null, user) // needs full user, not just id for serialize/deserialize
           } else {
             return done(null, false, { passwordOK: false })
           }
