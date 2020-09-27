@@ -1,13 +1,8 @@
 var User = require('../Database/Models/User')
-var bcrypt = require('bcrypt')
 var mongoose = require('mongoose')
 var crs = require('crypto-random-string')
 var MailController = require('./MailController')
 var MessageController = require('./MessageController')
-
-// Changing this will result in people not being able to log into the system.
-// Should be in config, but the opportunity has passed.
-const saltRounds = 10
 
 /**
  * ---
@@ -35,120 +30,6 @@ module.exports.sanitiseUser = sanitiseUser
 /**
  * ---
  * $returns:
- *  description: success true or false, error and user
- *  type: JSON
- * ---
- * Creates a user in the database.
- * emails will be turned lowercase.
- * response takes the form, but only error or user will be present
- * ``` javascript
- * {
- *    success: true|false,
- *    error: {
- *      email: {
- *        invalid: true,
- *        inUse: true
- *      },
- *      consent: {
- *        missing: true
- *      },
- *      password: {
- *        invalid: true,
- *        mismatchL true
- *      }
- *    },
- *    user: [User object]
- * }
- * ```
- */
-module.exports.createUser = function (req, res, next) {
-  const email = req.body.email.toLowerCase()
-  const name = req.body.name
-  const pwd = req.body.password
-  const confPwd = req.body.confirmPassword
-  const agreement = req.body.agreement
-
-  if (!agreement) {
-    res.status(400)
-    return res.json({ success: false, error: { consent: { missing: true } } })
-  }
-
-  // Validate fields
-  if (email.length > 254) {
-    res.status(400)
-    return res.json({ success: false, error: { email: { invalid: true } } })
-  }
-
-  if (name.length > 16) {
-    res.status(400)
-    return res.json({ success: false, error: { name: { invalid: true } } })
-  }
-
-  if (pwd !== confPwd) {
-    res.status(400)
-    return res.json({ success: false, error: { password: { mismatch: true } } })
-  }
-  if (pwd.length < 8) {
-    res.status(400)
-    return res.json({ success: false, error: { password: { invalid: true } } })
-  }
-
-  // Check the email isn't already in use.
-  User.findOne({ email: email }, (err, user) => { // Email already exists
-    if (err) {
-      next(err)
-    } else {
-      // If the emails is in use, direct back to sign in page.
-      if (user !== null) {
-        res.status(400)
-        res.json({ success: false, error: { email: { inUse: true } } })
-      } else {
-        // salt and hash password
-        bcrypt.genSalt(saltRounds, (err, salt) => {
-          if (err) {
-            next(err)
-          } else {
-            bcrypt.hash(pwd, salt, (err, hashedPwd) => {
-              if (err) {
-                next(err)
-              } else {
-                // everything validated and secure, save user.
-                const user = new User({
-                  email: email,
-                  displayName: name,
-                  passwordHash: hashedPwd,
-                  confirmString: crs({ length: 32, type: 'url-safe' })
-                })
-
-                user.save((err, user) => {
-                  if (err) {
-                    next(err)
-                  } else {
-                    // Send new user email, don't care if it errs
-                    MailController.sendNewUserEmail(user.email, user.confirmString, () => {
-                      // After saving the user, log in and redirect to profile setup
-                      req.login(user, (liErr) => {
-                        if (liErr) {
-                          next(liErr)
-                        } else {
-                          res.json({ success: true, user: sanitiseUser(user) })
-                        }
-                      })
-                    })
-                  }
-                })
-              }
-            })
-          }
-        })
-      }
-    }
-  })
-}
-
-/**
- * ---
- * $returns:
  *  description: success true|false
  *  type: JSON
  * ---
@@ -165,64 +46,6 @@ module.exports.confirmEmailAddress = function (req, res, next) {
         res.json({ success: true })
       }
     })
-}
-
-/**
- * ---
- * $returns:
- *  description: success and/or error
- *  type: JSON
- * ---
- * Updates a password in the database. Used for changing a user's existing password.
- * - If data supplied is invalid, it will return no success and an error
- * - If data is valid it will return success
- */
-module.exports.updatePassword = function (req, res, next) {
-  const oldPwd = req.body.oldPwd
-  const newPwd = req.body.newPwd
-  const confPwd = req.body.confPwd
-
-  if (newPwd !== confPwd) {
-    res.status(400)
-    return res.json({ success: false, error: { password: { mismatch: true } } })
-  }
-  if (newPwd.length < 8) {
-    res.status(400)
-    return res.json({ success: false, error: { password: { invalid: true } } })
-  }
-
-  bcrypt.compare(oldPwd, req.user.passwordHash, (err, result) => {
-    if (err) {
-      return next(err)
-    } else {
-      if (result === true) {
-        bcrypt.genSalt(saltRounds, (err, salt) => {
-          if (err) {
-            next(err)
-          } else {
-            bcrypt.hash(newPwd, salt, (err, hashedPwd) => {
-              if (err) {
-                next(err)
-              } else {
-                User.updateOne({ _id: req.user.id },
-                  { $set: { passwordHash: hashedPwd } })
-                  .exec((err) => {
-                    if (err) {
-                      next(err)
-                    } else {
-                      return res.json({ success: true })
-                    }
-                  })
-              }
-            })
-          }
-        })
-      } else {
-        res.status(400)
-        return res.json({ success: false, error: { password: { incorrect: true } } })
-      }
-    }
-  })
 }
 
 /**
@@ -267,59 +90,6 @@ module.exports.requestNewPassword = function (req, res, next) {
 /**
  * ---
  * $returns:
- *  description: success and/or error
- *  type: JSON
- * ---
- * Updates a password in the database. Used for changing a user's forgotten password.
- * - If data supplied is invalid, it will render the change password page
- * - If data is valid it will redirect to /
- */
-module.exports.setNewPassword = function (req, res, next) {
-  const userId = req.body.userId
-  const passStr = req.body.passStr
-  const newPwd = req.body.newPwd
-  const confPwd = req.body.confPwd
-
-  if (!mongoose.Types.ObjectId.isValid(userId)) {
-    return next()
-  }
-
-  if (newPwd !== confPwd) {
-    res.status(400)
-    return res.json({ success: false, error: { password: { mismatch: true } } })
-  }
-  if (newPwd.length < 8) {
-    res.status(400)
-    return res.json({ success: false, error: { password: { valid: true } } })
-  }
-
-  // salt and hash password
-  bcrypt.genSalt(saltRounds, (err, salt) => {
-    if (err) {
-      next(err)
-    } else {
-      bcrypt.hash(newPwd, salt, (err, hashedPwd) => {
-        if (err) {
-          next(err)
-        } else {
-          User.updateOne({ _id: userId, passResetString: passStr },
-            { $set: { passwordHash: hashedPwd, passResetString: '' } })
-            .exec((err, result) => {
-              if (err) {
-                next(err)
-              } else {
-                res.json({ success: true })
-              }
-            })
-        }
-      })
-    }
-  })
-}
-
-/**
- * ---
- * $returns:
  *  description: A user profile
  *  type: JSON
  * ---
@@ -353,7 +123,6 @@ module.exports.getOtherUser = function (req, res, next) {
  * ---
  */
 module.exports.getSelfUser = function (req, res) {
-
   res.json({ user: sanitiseUser(req.user) })
 }
 

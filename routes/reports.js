@@ -4,7 +4,7 @@ var ReportController = require('../Controllers/ReportController')
 
 module.exports = () => {
   var router = express.Router()
-  
+
   /**
    * ---
    * $body:

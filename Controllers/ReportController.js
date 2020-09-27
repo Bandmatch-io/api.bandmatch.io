@@ -37,7 +37,7 @@ module.exports.createReport = function (req, res, next) {
   if (reportedUser !== undefined) {
     if (!mongoose.Types.ObjectId.isValid(reportedUser)) {
       res.status(400)
-      return res.json({ success: false, error: { reportedUser: { invalid: true } }  })
+      return res.json({ success: false, error: { reportedUser: { invalid: true } } })
     }
   }
 
