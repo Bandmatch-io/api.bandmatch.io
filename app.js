@@ -14,6 +14,7 @@ var usersRouter = require('./routes/users')(passport)
 var conversationsRouter = require('./routes/conversations')()
 var reportsRouter = require('./routes/reports')()
 var adminRouter = require('./routes/admin/index')()
+var authRouter = require('./routes/auth')(passport)
 
 var app = express()
 
@@ -73,6 +74,7 @@ app.all('*', function (req, res, next) {
   return next()
 })
 
+app.use('/auth', authRouter)
 app.use('/users', usersRouter)
 app.use('/conversations', conversationsRouter)
 app.use('/reports', reportsRouter)

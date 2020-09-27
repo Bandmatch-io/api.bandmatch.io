@@ -7,18 +7,6 @@ const MailController = require('./MailController')
 /**
  * ---
  * $returns:
- *  description: Renders the messages page
- *  type: HTML
- * ---
- * Sends the renderered message page.
- */
-module.exports.viewMessages = function (req, res, next) {
-  res.render('messages', { title: 'Messages' })
-}
-
-/**
- * ---
- * $returns:
  *  description: Fetches all the conversations for a person
  *  type: JSON
  * ---
@@ -34,39 +22,68 @@ module.exports.fetchAllConversations = function (req, res, next) {
     .select('-__v')
     .exec((err, conversation) => {
       if (err) {
+        res.status(500)
         res.json({ success: false })
       } else {
       // Remove the logged in users id from participants
-        conversation.forEach(c => c.participants.remove(req.user._id))
+        // conversation.forEach(c => c.participants.remove(req.user._id))
         res.json({ success: true, conversations: conversation.reverse() })
       }
     })
 }
 
-/**
- * ---
- * $returns:
- *  description: Renders a new message page
- *  type: HTML / REDIRECT
- * ---
- * Renders a new message page, filled with data. Redirecst to index if id is not associated  with a user.
- */
-module.exports.newMessage = function (req, res, next) {
-  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    return next()
+module.exports.sendMessage = function (req, res, next) {
+  const recipientID = req.body.recipientID
+  const messageContent = req.body.messageContent
+
+  if (!mongoose.Types.ObjectId.isValid(recipientID)) {
+    res.status(400)
+    return res.json({ success: false, error: { recipient: { invalid: true } } })
   }
-  // Fetch the user details so it can be rendered on the page
-  User.findById(req.params.id)
-    .select('_id displayName')
-    .exec((err, user) => {
+
+  const msg = new Message({
+    content: messageContent,
+    sender: req.user._id
+  })
+
+  // Find the conversation, or create one if it doesn't exists
+  Conversation.findOneAndUpdate({ participants: { $all: [req.user._id, recipientID] } },
+    {},
+    { new: true, upsert: true }, (err, conversation) => {
       if (err) {
-        next(err)
+        res.status(500)
+        res.json({ success: false })
       } else {
-        if (!user) {
-          res.redirect('/')
-        } else {
-          res.render('newmessage', { title: 'Send New Message', recipient: user })
-        }
+        // save the new message
+        msg.conversation = conversation._id
+        msg.save((err, msg) => {
+          if (err) {
+            res.status(500)
+            res.json({ success: false })
+          } else {
+            // Update the conversation
+            Conversation.findOneAndUpdate({ _id: conversation._id },
+              { $set: { lastMessage: msg._id } }, (err, conversation, res) => {
+                if (err) {
+                  res.status(500)
+                  res.json({ success: false })
+                } else {
+                  // Find user to send new message email
+                  User.find({ _id: recipientID }, (err, user) => {
+                    if (err) {
+                      res.json({ success: true, message: msg })
+                    } else {
+                      if (user) {
+                        // needs to redirect whether MailController errors or not, so just skip those args
+                        MailController.sendNewMessageEmail(user.email, conversation._id)
+                      }
+                      res.json({ success: true, message: msg })
+                    }
+                  }) // User.find
+                }
+              }) // Conversation.findOneAndUpdate
+          }
+        }) // msg.save
       }
     })
 }
@@ -80,7 +97,7 @@ module.exports.newMessage = function (req, res, next) {
  * Creates a new conversation, adds a new message to it, and then redirects to that conversation page if there is no error.
  * Also sends a new message email.
  */
-module.exports.sendMessage = function (req, res, next) {
+module.exports.sendMessageOld = function (req, res, next) {
   const convo = new Conversation({
     participants: [req.user._id, req.body.recipientID]
   })
@@ -151,22 +168,6 @@ module.exports.replyToConversation = function (req, res, next) {
 /**
  * ---
  * $returns:
- *  description: HTML for a conversation
- *  type: HTML
- * ---
- * Renders the conversation page for id ID
- */
-module.exports.viewConversation = function (req, res, next) {
-  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    return next()
-  }
-
-  res.render('conversation', { title: 'Conversation', conversationID: req.params.id })
-}
-
-/**
- * ---
- * $returns:
  *  description: Data for a conversation
  *  type: JSON
  * ---
@@ -189,6 +190,7 @@ module.exports.getConversationData = function (req, res, next) {
           res.json({ success: false })
         } else {
           if (messages.length < 1) {
+            res.status(400)
             res.json({ success: false })
           }
           // Ensure only participants and admins can view the conversation
@@ -196,7 +198,8 @@ module.exports.getConversationData = function (req, res, next) {
               req.user.admin === true) {
             res.json({ success: true, messages: messages })
           } else {
-            res.json({ success: false })
+            res.status(401)
+            res.json({ success: false, error: { unauthorized: true } })
           }
         }
       }
@@ -216,6 +219,7 @@ module.exports.unreadMessageCount = function (req, res, next) {
     .populate('lastMessage') // we only need the lastMessage field for each conversation
     .exec((err, conversations) => {
       if (err) {
+        res.status(500)
         res.json({ success: false })
       } else {
         if (!conversations) {
@@ -241,13 +245,15 @@ module.exports.unreadMessageCount = function (req, res, next) {
  */
 module.exports.markAsRead = function (req, res, next) {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    return res.json({ success: false })
+    res.status(400)
+    return res.json({ success: false, error: { conversation: { invalid: true } } })
   }
 
   // Update the message with id if the sender is not the user logged in
   Message.updateOne({ _id: req.params.id, sender: { $ne: req.user._id } }, { $set: { read: true } })
     .exec((err, msg) => {
       if (err) {
+        res.status(500)
         res.json({ success: false })
       } else {
         res.json({ success: true })
@@ -265,18 +271,21 @@ module.exports.markAsRead = function (req, res, next) {
  */
 module.exports.deleteConvo = function (req, res, next) {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    return res.json({ success: false })
+    res.status(400)
+    return res.json({ success: false, error: { conversation: { invalid: true } } })
   }
 
   Conversation.find({ _id: req.params.id })
     .exec((err, convos) => {
       if (err) {
+        res.status(500)
         res.json({ success: false })
       } else {
         convos.forEach((convo) => {
           Message.deleteMany({ conversation: convo._id })
             .exec((err) => {
               if (err) {
+                res.status(500)
                 res.json({ success: false })
               } else {
                 convo.deleteOne()

@@ -18,7 +18,6 @@ module.exports = () => {
         return done(null, false, { emailOK: false })
       }
       bcrypt.compare(password, user.passwordHash, (err, result) => {
-
         if (err) {
           return done(err)
         } else {

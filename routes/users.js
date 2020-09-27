@@ -2,7 +2,6 @@ var express = require('express')
 var mongoose = require('mongoose')
 
 var UserController = require('../Controllers/UserController')
-var StatController = require('../Controllers/StatController')
 
 var User = require('../Database/Models/User')
 var Conversation = require('../Database/Models/Conversation')
@@ -10,19 +9,13 @@ var Conversation = require('../Database/Models/Conversation')
 module.exports = (passport) => {
   var router = express.Router()
 
-  router.post('/new', UserController.createUser)
-
   router.get('/profile', UserController.getSelfUser)
 
   router.get('/profile/:id', UserController.getOtherUser)
 
   router.patch('/profile', UserController.updateSelfUser)
 
-  router.patch('/password/update', UserController.updatePassword)
-
   router.patch('/password/request', UserController.requestNewPassword)
-
-  router.patch('/password/:str', UserController.setNewPassword)
 
   /**
    * ---
@@ -96,57 +89,6 @@ module.exports = (passport) => {
    * Renders the sign in page on invalid data
    */
   router.get('/confirm/:str', UserController.confirmEmailAddress)
-
-  /**
-   * ---
-   * $route:
-   *  method: POST
-   *  endpoint: /users/
-   * $body:
-   *  type: application/json
-   *  content:
-   *    email: string
-   *    password: string
-   * $returns:
-   *  description: success and user
-   *  type: JSON
-   * ---
-   * Logs in the user
-   */
-  router.post('/', function (req, res, next) {
-    passport.authenticate('local', function (err, user, info) {
-      if (err) {
-        next(err)
-      }
-
-      // Check for errors with log in
-      if (!user) {
-        if (info.emailOK !== undefined) {
-          return res.json({ success: false, error: { email: { invalid: true } } })
-        }
-        if (info.passwordOK !== undefined) {
-          return res.json({ success: false, error: { password: { invalid: true } } })
-        }
-      }
-
-      // log in and increment logins stat
-      req.login(user, function (err) {
-        if (err) {
-          return next(err)
-        }
-
-        if (!user.admin) {
-          // only incremement stat if user is non-admin
-          StatController.incrementStat('logins')
-        }
-        if (user) {
-          res.json({ success: true, user: UserController.sanitiseUser(user) })
-        } else {
-          res.json({ succes: false, error: { credentials: { missing: true } } })
-        }
-      })
-    })(req, res, next)
-  })
 
   return router
 }
