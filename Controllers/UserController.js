@@ -354,7 +354,7 @@ module.exports.getOtherUser = function (req, res, next) {
  */
 module.exports.getSelfUser = function (req, res) {
 
-  res.json({ user: sanitiseUser(req.user) })
+  res.json({ success: true, user: sanitiseUser(req.user) })
 }
 
 /**
