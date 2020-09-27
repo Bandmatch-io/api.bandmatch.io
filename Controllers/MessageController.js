@@ -80,11 +80,11 @@ module.exports.sendMessage = function (req, res, next) {
                       }
                       res.json({ success: true, message: msg})
                     }
-                  })
+                  }) // User.find
                 }
-              })
+              }) // Conversation.findOneAndUpdate
           }
-        })
+        }) //msg.save
       }
     })
 }
@@ -138,7 +138,7 @@ module.exports.sendMessageOld = function (req, res, next) {
  *  type: Redirect
  * ---
  * Adds a new message to a conversation, email notifies the recipient and finally redirects to that conversation page.
- */let 
+ */
 module.exports.replyToConversation = function (req, res, next) {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return next()
