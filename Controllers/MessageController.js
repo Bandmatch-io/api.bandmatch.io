@@ -4,7 +4,6 @@ const Conversation = require('../Database/Models/Conversation')
 const mongoose = require('mongoose')
 const MailController = require('./MailController')
 
-
 /**
  * ---
  * $returns:
@@ -37,12 +36,12 @@ module.exports.sendMessage = function (req, res, next) {
   const recipientID = req.body.recipientID
   const messageContent = req.body.messageContent
 
-  if (!mongoose.Types.ObjectId.isValid(conversationID)) {
+  if (!mongoose.Types.ObjectId.isValid(recipientID)) {
     res.status(400)
     return res.json({ success: false, error: { recipient: { invalid: true } } })
   }
 
-  let msg = new Message({
+  const msg = new Message({
     content: messageContent,
     sender: req.user._id
   })
@@ -53,7 +52,7 @@ module.exports.sendMessage = function (req, res, next) {
     { new: true, upsert: true }, (err, conversation) => {
       if (err) {
         res.status(500)
-        res.json({ success:false })
+        res.json({ success: false })
       } else {
         // save the new message
         msg.conversation = conversation._id
@@ -69,26 +68,25 @@ module.exports.sendMessage = function (req, res, next) {
                   res.status(500)
                   res.json({ success: false })
                 } else {
-                  
+                  // Find user to send new message email
                   User.find({ _id: recipientID }, (err, user) => {
                     if (err) {
-                      res.json({ success: true, message: msg})
+                      res.json({ success: true, message: msg })
                     } else {
                       if (user) {
                         // needs to redirect whether MailController errors or not, so just skip those args
                         MailController.sendNewMessageEmail(user.email, conversation._id)
                       }
-                      res.json({ success: true, message: msg})
+                      res.json({ success: true, message: msg })
                     }
                   }) // User.find
                 }
               }) // Conversation.findOneAndUpdate
           }
-        }) //msg.save
+        }) // msg.save
       }
     })
 }
-
 
 /**
  * ---

@@ -2,7 +2,6 @@ var express = require('express')
 var mongoose = require('mongoose')
 
 var UserController = require('../Controllers/UserController')
-var StatController = require('../Controllers/StatController')
 
 var User = require('../Database/Models/User')
 var Conversation = require('../Database/Models/Conversation')
@@ -17,8 +16,6 @@ module.exports = (passport) => {
   router.patch('/profile', UserController.updateSelfUser)
 
   router.patch('/password/request', UserController.requestNewPassword)
-
-
 
   /**
    * ---
