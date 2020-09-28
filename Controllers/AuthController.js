@@ -9,7 +9,7 @@ var mongoose = require('mongoose')
 // Should be in config, but the opportunity has passed.
 const saltRounds = 10
 
-module.exports.hashPassword = function (plaintext, done) {
+var hashPassword = function (plaintext, done) {
   bcrypt.genSalt(saltRounds, (err, salt) => {
     if (err) {
       done(err)
@@ -24,6 +24,7 @@ module.exports.hashPassword = function (plaintext, done) {
     }
   })
 }
+module.exports.hashPassword = hashPassword
 
 /**
  * ---
@@ -91,7 +92,7 @@ module.exports.createUser = function (req, res, next) {
         res.json({ success: false, error: { email: { inUse: true } } })
       } else {
         // salt and hash password
-        this.hashPassword(pwd, (err, hashedPwd) => {
+        hashPassword(pwd, (err, hashedPwd) => {
           if (err) {
             next(err)
           } else {
@@ -127,6 +128,16 @@ module.exports.createUser = function (req, res, next) {
   })
 }
 
+module.exports.removeLogin = function (req, res, next) {
+  if (req.user) {
+    req.logout()
+    res.json({ success: true })
+  } else {
+    res.status(401)
+    res.json({ success: false })
+  }
+}
+
 /**
  * ---
  * $returns:
@@ -156,7 +167,7 @@ module.exports.updatePassword = function (req, res, next) {
       return next(err)
     } else {
       if (result === true) {
-        this.hashPassword(newPwd, (err, hashedPwd) => {
+        hashPassword(newPwd, (err, hashedPwd) => {
           if (err) {
             next(err)
           } else {
@@ -209,7 +220,7 @@ module.exports.setNewPassword = function (req, res, next) {
   }
 
   // salt and hash password
-  this.hashPassword(newPwd, (err, hashedPwd) => {
+  hashPassword(newPwd, (err, hashedPwd) => {
     if (err) {
       next(err)
     } else {

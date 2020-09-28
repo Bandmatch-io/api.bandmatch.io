@@ -29,8 +29,8 @@ module.exports = () => {
         }
       })
     })
-  }
-  ))
+  })
+  )
 
   /**
    * Serializes a user.

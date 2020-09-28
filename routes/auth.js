@@ -12,6 +12,8 @@ module.exports = (passport) => {
 
   router.post('/new', AuthController.createUser)
 
+  router.post('/logout', AuthController.removeLogin)
+
   /**
    * ---
    * $route:
@@ -63,7 +65,7 @@ module.exports = (passport) => {
           res.json({ succes: false, error: { credentials: { missing: true } } })
         }
       })
-    })
+    })(req, res, next) // This is needed to call the middle ware.
   })
 
   return router
