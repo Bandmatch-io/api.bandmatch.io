@@ -6,6 +6,7 @@ var debug = require('debug')('band-match:api')
 var compression = require('compression')
 var config = require('config')
 var cors = require('cors')
+var helmet = require('helmet')
 
 var airbrake = require('./bin/airbrake')()
 var passport = require('./bin/passport')()
@@ -19,6 +20,8 @@ var authRouter = require('./routes/auth')(passport)
 var app = express()
 
 app.use(compression())
+
+app.use(helmet())
 
 var corsOptions = {
   origin: 'http://localhost:3000',
