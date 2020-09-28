@@ -22,7 +22,9 @@ module.exports.sendNewMessageEmail = function (email, convoID, callback) {
   }
 
   mailer.sendMail(options, (err, info) => {
-    callback(err, info)
+    if (callback) {
+      callback(err, info)
+    }
   })
 }
 

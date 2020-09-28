@@ -47,45 +47,52 @@ module.exports.sendMessage = function (req, res, next) {
   })
 
   // Find the conversation, or create one if it doesn't exists
-  Conversation.findOneAndUpdate({ participants: { $all: [req.user._id, recipientID] } },
-    {},
-    { new: true, upsert: true }, (err, conversation) => {
-      if (err) {
-        res.status(500)
-        res.json({ success: false })
-      } else {
-        // save the new message
-        msg.conversation = conversation._id
-        msg.save((err, msg) => {
-          if (err) {
-            res.status(500)
-            res.json({ success: false })
-          } else {
-            // Update the conversation
-            Conversation.findOneAndUpdate({ _id: conversation._id },
-              { $set: { lastMessage: msg._id } }, (err, conversation, res) => {
-                if (err) {
-                  res.status(500)
-                  res.json({ success: false })
-                } else {
-                  // Find user to send new message email
-                  User.find({ _id: recipientID }, (err, user) => {
-                    if (err) {
-                      res.json({ success: true, message: msg })
-                    } else {
-                      if (user) {
-                        // needs to redirect whether MailController errors or not, so just skip those args
-                        MailController.sendNewMessageEmail(user.email, conversation._id)
-                      }
-                      res.json({ success: true, message: msg })
+  Conversation.findOneAndUpdate({
+    participants: {
+      $all: [ // Need $elemMatch for matching array out of order
+        { $elemMatch: { $eq: req.user._id } },
+        { $elemMatch: { $eq: recipientID } }
+      ]
+    }
+  },
+  { $set: { participants: [req.user._id, recipientID] } }, // set participants
+  { new: true, upsert: true }, (err, conversation) => {
+    if (err) {
+      res.status(500)
+      res.json({ success: false })
+    } else {
+      // save the new message
+      msg.conversation = conversation._id
+      msg.save((err, msg) => {
+        if (err) {
+          res.status(500)
+          res.json({ success: false })
+        } else {
+          // Update the conversation
+          Conversation.findOneAndUpdate({ _id: conversation._id },
+            { $set: { lastMessage: msg._id } }, (err, conversation, result) => {
+              if (err) {
+                res.status(500)
+                res.json({ success: false })
+              } else {
+                // Find user to send new message email
+                User.find({ _id: recipientID }, (err, user) => {
+                  if (err) {
+                    res.json({ success: true, message: msg })
+                  } else {
+                    if (user) {
+                      // needs to redirect whether MailController errors or not, so just skip those args
+                      MailController.sendNewMessageEmail(user.email, conversation._id)
                     }
-                  }) // User.find
-                }
-              }) // Conversation.findOneAndUpdate
-          }
-        }) // msg.save
-      }
-    })
+                    res.json({ success: true, message: msg })
+                  }
+                }) // User.find
+              }
+            }) // Conversation.findOneAndUpdate
+        }
+      }) // msg.save
+    }
+  })
 }
 
 /**

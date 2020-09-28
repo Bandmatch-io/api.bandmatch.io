@@ -14,7 +14,7 @@ if (process.env.NODE_ENV === 'production') {
 
 mongoose.set('useUnifiedTopology', true)
 
-mongoose.connect(url, { useNewUrlParser: true, useCreateIndex: true })
+mongoose.connect(url, { useNewUrlParser: true, useCreateIndex: true, useFindAndModify: false })
 
 mongoose.Promise = global.Promise
 const db = mongoose.connection
