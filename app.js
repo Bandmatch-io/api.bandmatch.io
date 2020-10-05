@@ -11,6 +11,7 @@ var helmet = require('helmet')
 var airbrake = require('./bin/airbrake')()
 var passport = require('./bin/passport')()
 
+var indexRouter = require('./routes/index')()
 var usersRouter = require('./routes/users')(passport)
 var conversationsRouter = require('./routes/conversations')()
 var reportsRouter = require('./routes/reports')()
@@ -24,7 +25,7 @@ app.use(compression())
 app.use(helmet())
 
 var corsOptions = {
-  origin: 'http://localhost:8080',
+  origin: 'http://localhost:3000',
   optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
   credentials: true
 }
@@ -77,6 +78,7 @@ app.all('*', function (req, res, next) {
   return next()
 })
 
+app.use('/', indexRouter)
 app.use('/auth', authRouter)
 app.use('/users', usersRouter)
 app.use('/conversations', conversationsRouter)

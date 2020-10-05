@@ -142,12 +142,12 @@ module.exports.updateSelfUser = function (req, res, next) {
     return res.json({ success: false, error: { login: { absent: true } } })
   }
 
-  if (req.body.name) {
-    if (req.body.name.length > 16) {
+  if (req.body.displayName) {
+    if (req.body.displayName.length > 16) {
       res.status(400)
-      return res.json({ success: false, error: { name: { invalid: true } } })
+      return res.json({ success: false, error: { displayName: { invalid: true } } })
     }
-    req.user.displayName = req.body.name
+    req.user.displayName = req.body.displayName
   }
 
   // function to clean genre and instruments
@@ -161,13 +161,13 @@ module.exports.updateSelfUser = function (req, res, next) {
     req.user.instruments = req.body.instruments.map(cleanStr)
   }
 
-  if (req.body.type) {
-    if (req.body.type === 'Form' || req.body.type === 'Join' ||
-      req.body.type === 'Either' || req.body.type === 'Recruit') {
-      req.user.searchType = req.body.type
+  if (req.body.searchType) {
+    if (req.body.searchType === 'Form' || req.body.searchType === 'Join' ||
+      req.body.searchType === 'Either' || req.body.searchType === 'Recruit') {
+      req.user.searchType = req.body.searchType
     } else {
       res.status(400)
-      return res.json({ success: false, error: { type: { invalid: true } } })
+      return res.json({ success: false, error: { searchType: { invalid: true } } })
     }
   }
 
@@ -179,19 +179,19 @@ module.exports.updateSelfUser = function (req, res, next) {
     req.user.description = req.body.description.trim()
   }
 
-  if (req.body.radius) {
-    if (req.body.radius < 0) {
+  if (req.body.searchRadius) {
+    if (req.body.searchRadius < 0) {
       res.status(400)
-      return res.json({ success: false, error: { radius: { negative: true } } })
+      return res.json({ success: false, error: { searchRadius: { negative: true } } })
     }
-    req.user.searchRadius = req.body.radius
+    req.user.searchRadius = req.body.searchRadius
   }
 
-  if (req.body.location) {
-    req.user.searchLocation.coordinates = [req.body.location.lng, req.body.location.lat]
+  if (req.body.searchLocation.coordinates) {
+    req.user.searchLocation.coordinates = req.body.searchLocation.coordinates
   }
 
-  if (req.body.active !== undefined) {
+  if (req.body.active) {
     req.user.active = req.body.active
   }
 

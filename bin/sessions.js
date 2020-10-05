@@ -36,7 +36,9 @@ module.exports = function (callback) {
     return session({
       secret: sessionsCFG.secret,
       cookie: {
-        maxAge: 1000 * 60 * 60 * 24 * sessionsCFG.ageInDays
+        maxAge: 1000 * 60 * 60 * 24 * sessionsCFG.ageInDays,
+        sameSite: 'none',
+        secure: true
       },
       store: store,
       saveUninitialized: false,
