@@ -9,14 +9,15 @@ var cors = require('cors')
 var helmet = require('helmet')
 
 var airbrake = require('./bin/airbrake')()
-var passport = require('./bin/passport')()
+// var passport = require('./bin/passport')()
+var jwt = require('./bin/jwt')
 
 var indexRouter = require('./routes/index')()
-var usersRouter = require('./routes/users')(passport)
+var usersRouter = require('./routes/users')()
 var conversationsRouter = require('./routes/conversations')()
 var reportsRouter = require('./routes/reports')()
 var adminRouter = require('./routes/admin/index')()
-var authRouter = require('./routes/auth')(passport)
+var authRouter = require('./routes/auth')()
 
 var app = express()
 
@@ -47,13 +48,14 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
 app.use(cookieParser())
 
-app.use(passport.initialize())
-app.use(passport.session())
+// app.use(passport.initialize())
+// app.use(passport.session())
 
 app.use(airbrake.middleware)
 
 var wl = config.get('anon_whitelist')
 var StatController = require('./Controllers/StatController')
+
 
 app.all('*', function (req, res, next) {
   if (req.query.ref) {
@@ -70,6 +72,17 @@ app.all('*', function (req, res, next) {
   if (allowThrough) {
     return next()
   }
+
+  let token = req.headers.authorization.split(" ")[1]
+  jwt.verifyToken(token, (err, decoded) => {
+    if (err) {
+      return next(err)
+    } else {
+      req.user = {
+        _id: decoded.sub._id
+      }
+    }
+  })
 
   if (req.user === undefined) {
     res.status(401)
@@ -99,7 +112,11 @@ app.use(function (err, req, res, next) {
   // render the error page
   res.status(err.status || 500)
   // res.render('error')
-  res.json({ status: err.status || 500 })
+  if (req.app.get('env') === 'development') {
+    res.json({ status: 500, reason: err})
+  } else {
+    res.json({ status: err.status || 500 })
+  }
 })
 
 app.use(airbrake.errorHandler)

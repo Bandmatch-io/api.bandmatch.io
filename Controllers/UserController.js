@@ -118,13 +118,28 @@ module.exports.getOtherUser = function (req, res, next) {
 /**
  * ---
  * $returns:
- *  description: The logged in user's data
+ *  description: The user data with the id from the jwt
  *  type: JSON
  * ---
  */
 module.exports.getSelfUser = function (req, res) {
+  if (!mongoose.Types.ObjectId.isValid(req.user._id)) {
+    return next()
+  }
 
-  res.json({ success: true, user: sanitiseUser(req.user) })
+  User.findById(req.user._id)
+    .select('-passwordHash -confirmString')
+    .exec((err, user) => {
+      if (err) {
+        next(err)
+      } else {
+        if (!user) {
+          next() // direct to 404
+        } else {
+          res.json({ success: true, user: sanitiseUser(user) })
+        }
+      }
+    })
 }
 
 /**

@@ -6,7 +6,7 @@ var UserController = require('../Controllers/UserController')
 var User = require('../Database/Models/User')
 var Conversation = require('../Database/Models/Conversation')
 
-module.exports = (passport) => {
+module.exports = () => {
   var router = express.Router()
 
   router.get('/profile', UserController.getSelfUser)
