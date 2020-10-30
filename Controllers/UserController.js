@@ -131,12 +131,12 @@ module.exports.getSelfUser = function (req, res) {
     .select('-passwordHash -confirmString')
     .exec((err, user) => {
       if (err) {
-        next(err)
+        return next(err)
       } else {
         if (!user) {
           next() // direct to 404
         } else {
-          res.json({ success: true, user: sanitiseUser(user) })
+          return res.json({ success: true, user: sanitiseUser(user) })
         }
       }
     })
@@ -153,69 +153,65 @@ module.exports.getSelfUser = function (req, res) {
 module.exports.updateSelfUser = function (req, res, next) {
   // sanity check, should not be accessible if not logged in but check anyway.
   if (req.user === undefined) {
-    res.status(401)
-    return res.json({ success: false, error: { login: { absent: true } } })
+    return res.status(401).json({ success: false, error: { login: { absent: true } } })
   }
-
-  if (req.body.displayName) {
-    if (req.body.displayName.length > 16) {
-      res.status(400)
-      return res.json({ success: false, error: { displayName: { invalid: true } } })
+  User.findById(req.user._id, (err, user) => {
+    if (req.body.displayName) {
+      if (req.body.displayName.length > 16) {
+        return res.status(400).json({ success: false, error: { displayName: { invalid: true } } })
+      }
+      user.displayName = req.body.displayName
     }
-    req.user.displayName = req.body.displayName
-  }
-
-  // function to clean genre and instruments
-  const cleanStr = (str) => { return str.toLowerCase().replace(/[^a-zA-Z\s]+/g, '') }
-
-  if (req.body.genres) {
-    req.user.genres = req.body.genres.map(cleanStr)
-  }
-
-  if (req.body.instruments) {
-    req.user.instruments = req.body.instruments.map(cleanStr)
-  }
-
-  if (req.body.searchType) {
-    if (req.body.searchType === 'Form' || req.body.searchType === 'Join' ||
-      req.body.searchType === 'Either' || req.body.searchType === 'Recruit') {
-      req.user.searchType = req.body.searchType
-    } else {
-      res.status(400)
-      return res.json({ success: false, error: { searchType: { invalid: true } } })
+  
+    // function to clean genre and instruments
+    const cleanStr = (str) => { return str.toLowerCase().replace(/[^a-zA-Z\s]+/g, '') }
+  
+    if (req.body.genres) {
+      user.genres = req.body.genres.map(cleanStr)
     }
-  }
-
-  if (req.body.description) {
-    if (req.body.description.length > 512) {
-      res.status(400)
-      return res.json({ success: false, error: { description: { invalid: true } } })
+  
+    if (req.body.instruments) {
+      user.instruments = req.body.instruments.map(cleanStr)
     }
-    req.user.description = req.body.description.trim()
-  }
-
-  if (req.body.searchRadius) {
-    if (req.body.searchRadius < 0) {
-      res.status(400)
-      return res.json({ success: false, error: { searchRadius: { negative: true } } })
+  
+    if (req.body.searchType) {
+      if (req.body.searchType === 'Form' || req.body.searchType === 'Join' ||
+        req.body.searchType === 'Either' || req.body.searchType === 'Recruit') {
+        user.searchType = req.body.searchType
+      } else {
+        return res.status(400).json({ success: false, error: { searchType: { invalid: true } } })
+      }
     }
-    req.user.searchRadius = req.body.searchRadius
-  }
-
-  if (req.body.searchLocation.coordinates) {
-    req.user.searchLocation.coordinates = req.body.searchLocation.coordinates
-  }
-
-  if (req.body.active) {
-    req.user.active = req.body.active
-  }
-
-  req.user.save((err, user) => {
-    if (err) {
-      next(err)
-    } else {
-      res.json({ success: true, user: sanitiseUser(user) })
+  
+    if (req.body.description) {
+      if (req.body.description.length > 512) {
+        return res.status(400).json({ success: false, error: { description: { invalid: true } } })
+      }
+      user.description = req.body.description.trim()
     }
+  
+    if (req.body.searchRadius) {
+      if (req.body.searchRadius < 0) {
+        return res.status(400).json({ success: false, error: { searchRadius: { negative: true } } })
+      }
+      user.searchRadius = req.body.searchRadius
+    }
+  
+    if (req.body.searchLocation.coordinates) {
+      user.searchLocation.coordinates = req.body.searchLocation.coordinates
+    }
+  
+    if (req.body.active) {
+      user.active = req.body.active
+    }
+  
+    user.save((err, user) => {
+      if (err) {
+        next(err)
+      } else {
+        res.json({ success: true, user: sanitiseUser(user) })
+      }
+    })
   })
 }
 

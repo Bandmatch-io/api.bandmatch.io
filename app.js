@@ -73,20 +73,22 @@ app.all('*', function (req, res, next) {
     return next()
   }
 
-  let token = req.headers.authorization.split(" ")[1]
-  jwt.verifyToken(token, (err, decoded) => {
-    if (err) {
-      return next(err)
-    } else {
-      req.user = {
-        _id: decoded.sub._id
+  if (req.headers.authorization !== undefined) {
+    let token = req.headers.authorization.split(" ")[1]
+    console.log("found auth header", req.headers.authorization)
+    if (token !== undefined) {
+      let decoded = jwt.verifyTokenSync(token)
+      if (decoded) {
+        req.user = {
+          _id: decoded.sub._id
+        }
       }
     }
-  })
+  }
 
   if (req.user === undefined) {
-    res.status(401)
-    return res.json({ success: false, error: { login: { absent: true } } })
+    // res.status(401)
+    return res.status(401).json({ success: false, error: { login: { absent: true } } })
   }
   return next()
 })
@@ -112,7 +114,8 @@ app.use(function (err, req, res, next) {
   // render the error page
   res.status(err.status || 500)
   // res.render('error')
-  if (req.app.get('env') === 'development') {
+  if (req.app.get('env') !== 'production') {
+    console.error(err)
     res.json({ status: 500, reason: err})
   } else {
     res.json({ status: err.status || 500 })

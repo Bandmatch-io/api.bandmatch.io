@@ -33,3 +33,12 @@ module.exports.verifyToken = function (token, done) {
     }
   })
 }
+
+module.exports.verifyTokenSync = function (token) {
+  let publicKey = fs.readFileSync('auth/jwt.pem') 
+  try {
+    return jwt.verify(token, publicKey, { algorithms: ['RS256'] })
+  } catch(err) {
+    return undefined
+  }
+}

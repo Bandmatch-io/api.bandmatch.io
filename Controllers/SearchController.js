@@ -26,29 +26,31 @@ module.exports.search = function (req, res, next) {
     types = ['Join', 'Either']
   }
 
-  User.find({
-    searchLocation: {
-      $near: {
-        $maxDistance: req.user.searchRadius * 1000, // searchRadius to km
-        $geometry: { type: 'Point', coordinates: req.user.searchLocation.coordinates }
-      }
-    },
-    genres: { $in: req.user.genres },
-    instruments: { $in: req.user.instruments },
-    _id: { $ne: req.user._id },
-    searchType: { $in: types },
-    active: true
-  })
-    .select('_id displayName searchType fullSearchType genres instruments description')
-    .exec((err, users) => {
-      if (err) {
-        res.json({ success: false })
-      } else {
-        res.json({ success: true, matches: users })
-
-        if (!req.user.admin) { // Don't incremement stat is admin
-          StatController.incrementStat('searches')
+  User.findById(req.user._id, (err, currUser) => {
+    User.find({
+      searchLocation: {
+        $near: {
+          $maxDistance: currUser.searchRadius * 1000, // searchRadius to km
+          $geometry: { type: 'Point', coordinates: currUser.searchLocation.coordinates }
         }
-      }
+      },
+      genres: { $in: currUser.genres },
+      instruments: { $in: currUser.instruments },
+      _id: { $ne: currUser._id },
+      searchType: { $in: types },
+      active: true
     })
+      .select('_id displayName searchType fullSearchType genres instruments description')
+      .exec((err, users) => {
+        if (err) {
+          res.json({ success: false })
+        } else {
+          res.json({ success: true, matches: users })
+  
+          if (!currUser.admin) { // Don't incremement stat is admin
+            StatController.incrementStat('searches')
+          }
+        }
+      })
+  })
 }
