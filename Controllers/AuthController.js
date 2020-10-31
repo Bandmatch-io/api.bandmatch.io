@@ -60,7 +60,7 @@ module.exports.createUser = function (req, res, next) {
   const email = req.body.email.toLowerCase()
   const name = req.body.name
   const pwd = req.body.password
-  const confPwd = req.body.confPassword
+  const confPwd = req.body.confirmPassword
   const agreement = req.body.agreement
 
   if (!agreement) {
