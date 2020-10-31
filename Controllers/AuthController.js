@@ -135,7 +135,7 @@ module.exports.loginUser = function (req, res, next){
     return res.status(400).json({ success: false, error: { email: { missing: true } }})
   }
   if (req.body.password === undefined) {
-    return res.status(400).json({ success: false, error: { email: { missing: true } }})
+    return res.status(400).json({ success: false, error: { password: { missing: true } }})
   }
   let email = req.body.email.toLowerCase()
   let password = req.body.password
