@@ -75,7 +75,6 @@ app.all('*', function (req, res, next) {
 
   if (req.headers.authorization !== undefined) {
     let token = req.headers.authorization.split(" ")[1]
-    console.log("found auth header", req.headers.authorization)
     if (token !== undefined) {
       let decoded = jwt.verifyTokenSync(token)
       if (decoded) {

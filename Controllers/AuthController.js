@@ -59,28 +59,28 @@ module.exports.hashPassword = hashPassword
 module.exports.createUser = function (req, res, next) {
   const email = req.body.email.toLowerCase()
   const name = req.body.name
-  const pwd = req.body.pass
-  const confPwd = req.body.confPass
+  const pwd = req.body.password
+  const confPwd = req.body.confPassword
   const agreement = req.body.agreement
 
   if (!agreement) {
-    return res.json({ success: false, error: { consent: { missing: true } } })
+    return res.status(400).json({ success: false, error: { consent: { missing: true } } })
   }
 
   // Validate fields
   if (email.length > 254) {
-    return res.json({ success: false, error: { email: { invalid: true } } })
+    return res.status(400).json({ success: false, error: { email: { invalid: true } } })
   }
 
   if (name.length > 16) {
-    return res.json({ success: false, error: { name: { invalid: true } } })
+    return res.status(400).json({ success: false, error: { name: { invalid: true } } })
   }
 
   if (pwd !== confPwd) {
-    return res.json({ success: false, error: { password: { mismatch: true } } })
+    return res.status(400).json({ success: false, error: { password: { mismatch: true } } })
   }
   if (pwd.length < 8) {
-    return res.json({ success: false, error: { password: { invalid: true } } })
+    return res.status(400).json({ success: false, error: { password: { invalid: true } } })
   }
 
   // Check the email isn't already in use.
@@ -90,7 +90,7 @@ module.exports.createUser = function (req, res, next) {
     } else {
       // If the emails is in use, direct back to sign in page.
       if (user !== null) {
-        res.json({ success: false, error: { email: { inUse: true } } })
+        res.status(400).json({ success: false, error: { email: { inUse: true } } })
       } else {
         // salt and hash password
         hashPassword(pwd, (err, hashedPwd) => {
@@ -111,12 +111,12 @@ module.exports.createUser = function (req, res, next) {
               } else {
                 // Send new user email, don't care if it errs
                 MailController.sendNewUserEmail(user.email, user.confirmString, () => {
-                  // After saving the user, log in and redirect to profile setup
-                  req.login(user, (liErr) => {
-                    if (liErr) {
-                      next(liErr)
+                  // After saving the user, issue a new jwt token for them
+                  jwt.issueToken({ _id: user._id }, (err, token) => {
+                    if (err) {
+                      return next(err)
                     } else {
-                      res.json({ success: true, user: UserController.sanitiseUser(user) })
+                      return res.json({ success: true, token: token })
                     }
                   })
                 })
@@ -144,7 +144,7 @@ module.exports.loginUser = function (req, res, next){
         return next(err)
       }
       if (!user) {
-        return res.json({ success: false, error: { email: { invalid: true } }})
+        return res.status(400).json({ success: false, error: { email: { invalid: true } }})
       }
       bcrypt.compare(password, user.passwordHash, (err, result) => {
         if (err) {
@@ -160,7 +160,7 @@ module.exports.loginUser = function (req, res, next){
             })
             // return done(null, user) // needs full user, not just id for serialize/deserialize
           } else {
-            return res.json({ success: false, error: { password: { incorrect: true } }})
+            return res.status(400).json({ success: false, error: { password: { incorrect: true } }})
         }
       }
     })
@@ -169,11 +169,9 @@ module.exports.loginUser = function (req, res, next){
 
 module.exports.removeLogin = function (req, res, next) {
   if (req.user) {
-    req.logout()
     res.json({ success: true })
   } else {
-    res.status(401)
-    res.json({ success: false })
+    res.status(401).json({ success: false })
   }
 }
 
