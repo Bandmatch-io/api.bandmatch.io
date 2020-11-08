@@ -22,8 +22,7 @@ module.exports.fetchAllConversations = function (req, res, next) {
     .select('-__v')
     .exec((err, conversation) => {
       if (err) {
-        res.status(500)
-        res.json({ success: false })
+        next(err)
       } else {
       // Remove the logged in users id from participants
         // conversation.forEach(c => c.participants.remove(req.user._id))
@@ -37,8 +36,7 @@ module.exports.sendMessage = function (req, res, next) {
   const messageContent = req.body.messageContent
 
   if (!mongoose.Types.ObjectId.isValid(recipientID)) {
-    res.status(400)
-    return res.json({ success: false, error: { recipient: { invalid: true } } })
+    return res.status(400).json({ success: false, error: { recipient: { invalid: true } } })
   }
 
   const msg = new Message({
@@ -48,126 +46,60 @@ module.exports.sendMessage = function (req, res, next) {
 
   // Find the conversation, or create one if it doesn't exists
   Conversation.findOneAndUpdate({
-    participants: {
-      $all: [ // Need $elemMatch for matching array out of order
-        { $elemMatch: { $eq: req.user._id } },
-        { $elemMatch: { $eq: recipientID } }
-      ]
-    }
+    $or: [
+      { participants: { $eq: [req.user._id, recipientID] } },
+      { participants: { $eq: [recipientID, req.user._id] } },
+    ]
   },
   { $set: { participants: [req.user._id, recipientID] } }, // set participants
   { new: true, upsert: true }, (err, conversation) => {
     if (err) {
-      res.status(500)
-      res.json({ success: false })
+      next(err)
     } else {
       // save the new message
       msg.conversation = conversation._id
       msg.save((err, msg) => {
         if (err) {
-          res.status(500)
-          res.json({ success: false })
+          next(err)
         } else {
           // Update the conversation
           Conversation.findOneAndUpdate({ _id: conversation._id },
             { $set: { lastMessage: msg._id } }, (err, conversation, result) => {
               if (err) {
-                res.status(500)
-                res.json({ success: false })
+                next(err)
               } else {
-                // Find user to send new message email
-                User.find({ _id: recipientID }, (err, user) => {
+                Message.populate(msg, { path: "sender" }, (err, popMsg) => {
                   if (err) {
-                    res.json({ success: true, message: msg })
+                    next(err)
                   } else {
-                    if (user) {
-                      // needs to redirect whether MailController errors or not, so just skip those args
-                      MailController.sendNewMessageEmail(user.email, conversation._id)
-                    }
-                    res.json({ success: true, message: msg })
+                    Conversation.populate(conversation, 
+                      [
+                        { path: 'participants', select: 'displayName' },
+                        { path: 'lastMessage', select: 'read _id sender timestamp' }
+                      ], (err, popConvo) => {
+                        if (err) {
+                          next(err)
+                        } else {
+                          // Find user to send new message email
+                          User.find({ _id: recipientID }, (err, user) => {
+                            if (err) {
+                              res.json({ success: true, conversation: conversation, message: popMsg })
+                            } else {
+                              if (user) {
+                                // needs to redirect whether MailController errors or not, so just skip those args
+                                MailController.sendNewMessageEmail(user.email, conversation._id)
+                              }
+                              res.json({ success: true, conversation: conversation, message: popMsg })
+                            }
+                          }) // User.find
+                        }
+                      }) // Conversation.populate
                   }
-                }) // User.find
+                }) // Message.populate
               }
             }) // Conversation.findOneAndUpdate
         }
       }) // msg.save
-    }
-  })
-}
-
-/**
- * ---
- * $returns:
- *  description: Opens the new conversation page
- *  type: Redirect to the conversation screen
- * ---
- * Creates a new conversation, adds a new message to it, and then redirects to that conversation page if there is no error.
- * Also sends a new message email.
- */
-module.exports.sendMessageOld = function (req, res, next) {
-  const convo = new Conversation({
-    participants: [req.user._id, req.body.recipientID]
-  })
-
-  convo.save((err, conversation) => {
-    if (err) {
-      console.log(err)
-      next(err)
-    } else {
-      const message = new Message({
-        content: req.body.content.trim(),
-        conversation: conversation._id,
-        sender: req.user._id
-      })
-
-      // Save the message, then redirect to view the page
-      message.save((err, message) => {
-        if (err) {
-          console.log(err)
-          next(err)
-        } else {
-          // needs to redirect whether MailController errors or not, so just skip those args
-          MailController.sendNewMessageEmail(null, conversation._id, () => {
-            res.redirect('/messages/conversation/' + conversation._id)
-          })
-        }
-      })
-    }
-  })
-}
-
-/**
- * ---
- * $returns:
- *  description: Sends a new message in a conversation
- *  type: Redirect
- * ---
- * Adds a new message to a conversation, email notifies the recipient and finally redirects to that conversation page.
- */
-module.exports.replyToConversation = function (req, res, next) {
-  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    return next()
-  }
-
-  const message = new Message({
-    conversation: req.params.id,
-    content: req.body.content.trim(),
-    sender: req.user._id
-  })
-
-  message.save((err, message) => {
-    if (err) {
-      next(err)
-    } else {
-      // Can't be in pre hook because of cyclic dependancy
-      Conversation.updateOne({ _id: req.params.id },
-        { $set: { lastMessage: message._id } })
-        .exec()
-
-      // needs to redirect whether MailController errors or not, so just skip those args
-      MailController.sendNewMessageEmail(null, req.params.id, () => {
-        res.redirect('/messages/conversation/' + req.params.id)
-      })
     }
   })
 }
