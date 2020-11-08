@@ -157,7 +157,6 @@ module.exports.getConversationData = function (req, res, next) {
  * Gets the number of unreads for the logged in user.
  */
 module.exports.unreadMessageCount = function (req, res, next) {
-  console.log(req.user)
   if (!mongoose.Types.ObjectId.isValid(req.user._id)) {
     return res.status(400).json({ success: false })
   }
@@ -172,9 +171,12 @@ module.exports.unreadMessageCount = function (req, res, next) {
           res.json({ success: true, count: 0 })
         } else {
         // Get the number of conversations where the last message was not sent by the logged in user, read = false
-          const count = conversations.filter(c => c.lastMessage !== undefined &&
-                                                !c.lastMessage.read &&
-                                                c.lastMessage.sender._id.toString() !== req.user._id.toString()).length
+          const count = conversations.filter((c) => {
+            let msgExists = c.lastMessage !== undefined
+            let unread = !c.lastMessage.read
+            let isntme = c.lastMessage.sender._id.toString() !== req.user._id.toString()
+            return msgExists && unread && isntme
+          }).length
           res.json({ success: true, count: count })
         }
       }

@@ -130,7 +130,6 @@ module.exports.createUser = function (req, res, next) {
 }
 
 module.exports.loginUser = function (req, res, next){
-  console.log(req.body)
   if (req.body.email === undefined) {
     return res.status(400).json({ success: false, error: { email: { missing: true } }})
   }
