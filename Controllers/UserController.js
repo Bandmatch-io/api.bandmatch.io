@@ -19,6 +19,7 @@ const sanitiseUser = function (user) {
     genres: user.genres,
     instruments: user.instruments,
     active: user.active,
+    admin: user.admin,
     description: user.description,
     searchRadius: user.searchRadius,
     searchLocation: user.searchLocation,
