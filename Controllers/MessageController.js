@@ -39,6 +39,10 @@ module.exports.sendMessage = function (req, res, next) {
     return res.status(400).json({ success: false, error: { recipient: { invalid: true } } })
   }
 
+  if (messageContent === undefined || messageContent === '') {
+    return res.status(400).json({ success: false, error: { messageContent: { missing: true } } })
+  }
+
   const msg = new Message({
     content: messageContent,
     sender: req.user._id
@@ -114,7 +118,7 @@ module.exports.sendMessage = function (req, res, next) {
  */
 module.exports.getConversationData = function (req, res, next) {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    return res.json({ success: false })
+    return res.status(400).json({ success: false })
   }
 
   // get the sender's name for each message in the conversation
@@ -123,14 +127,13 @@ module.exports.getConversationData = function (req, res, next) {
     .populate('conversation')
     .exec((err, messages) => {
       if (err) {
-        res.json({ success: false })
+        next(err)
       } else {
         if (!messages) {
           res.json({ success: false })
         } else {
           if (messages.length < 1) {
-            res.status(400)
-            res.json({ success: false })
+            res.status(400).json({ success: false })
           }
           // Ensure only participants and admins can view the conversation
           if (messages[0].conversation.participants.includes(req.user._id) ||
@@ -154,12 +157,16 @@ module.exports.getConversationData = function (req, res, next) {
  * Gets the number of unreads for the logged in user.
  */
 module.exports.unreadMessageCount = function (req, res, next) {
+  console.log(req.user)
+  if (!mongoose.Types.ObjectId.isValid(req.user._id)) {
+    return res.status(400).json({ success: false })
+  }
+
   Conversation.find({ participants: { $in: req.user._id } })
     .populate('lastMessage') // we only need the lastMessage field for each conversation
     .exec((err, conversations) => {
       if (err) {
-        res.status(500)
-        res.json({ success: false })
+        next(err)
       } else {
         if (!conversations) {
           res.json({ success: true, count: 0 })
@@ -192,8 +199,7 @@ module.exports.markAsRead = function (req, res, next) {
   Message.updateOne({ _id: req.params.id, sender: { $ne: req.user._id } }, { $set: { read: true } })
     .exec((err, msg) => {
       if (err) {
-        res.status(500)
-        res.json({ success: false })
+        next(err)
       } else {
         res.json({ success: true })
       }

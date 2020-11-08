@@ -4,6 +4,8 @@ var MessageController = require('../Controllers/MessageController')
 module.exports = () => {
   var router = express.Router()
 
+  router.get('/unread', MessageController.unreadMessageCount)
+
   /* GET users listing. */
   router.get('/', MessageController.fetchAllConversations)
 
@@ -15,7 +17,6 @@ module.exports = () => {
 
   router.patch('/read/:id', MessageController.markAsRead)
 
-  router.get('/conversations/unread', MessageController.unreadMessageCount)
 
   return router
 }
