@@ -18,12 +18,16 @@ module.exports.sendNewMessageEmail = function (email, convoID, callback) {
     recipient: email,
     subject: 'New Message!',
     template: 'emails/newmessage.ejs',
-    renderOptions: { link: `${config.get('host_name')}/messages/conversation/${convoID}` }
+    renderOptions: { link: `${config.get('host_name')}/conversations` }
   }
 
   mailer.sendMail(options, (err, info) => {
     if (callback) {
-      callback(err, info)
+      if (err) {
+        callback(err)
+      } else {
+        callback(false, info)
+      }
     }
   })
 }
@@ -45,11 +49,17 @@ module.exports.sendRequestPassEmail = function (email, passStr, callback) {
     recipient: email,
     subject: 'Password reset request',
     template: 'emails/requestPass.ejs',
-    renderOptions: { link: `${config.get('host_name')}/users/newpassword?s=${passStr}` }
+    renderOptions: { link: `${config.get('host_name')}/account/newpassword?s=${passStr}` }
   }
 
   mailer.sendMail(options, (err, info) => {
-    callback(err, info)
+    if (callback) {
+      if (err) {
+        callback(err)
+      } else {
+        callback(false, info)
+      }
+    }
   })
 }
 
@@ -70,11 +80,16 @@ module.exports.sendNewUserEmail = function (email, confString, callback) {
     recipient: email,
     subject: 'Please confirm your email address',
     template: 'emails/confirmaccount.ejs',
-    renderOptions: { link: `${config.get('host_name')}/users/confirmemail/${confString}` }
+    renderOptions: { link: `${config.get('host_name')}/account/confirmemail/${confString}` }
   }
-  console.log(options)
 
   mailer.sendMail(options, (err, info) => {
-    callback(err, info)
+    if (callback) {
+      if (err) {
+        callback(err)
+      } else {
+        callback(false, info)
+      }
+    }
   })
 }

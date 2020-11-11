@@ -58,11 +58,10 @@ module.exports.confirmEmailAddress = function (req, res, next) {
  * Adds a passResetString to the logged in user, then sends an email to the user.
  */
 module.exports.requestNewPassword = function (req, res, next) {
-  const email = req.params.email
+  const email = req.body.email
 
   if (email === undefined) {
-    res.status(400)
-    res.json({ success: false, error: { email: { absent: true } } })
+    res.status(400).json({ success: false, error: { email: { absent: true } } })
   }
 
   const str = crs({ length: 32, type: 'url-safe' })
@@ -73,7 +72,7 @@ module.exports.requestNewPassword = function (req, res, next) {
         next(err)
       } else {
         if (result.n === 1) {
-          MailController.sendRequestPassEmail(email, str, () => {
+          MailController.sendRequestPassEmail(email, str, (err, info) => {
             if (err) {
               next(err)
             } else {
@@ -81,8 +80,7 @@ module.exports.requestNewPassword = function (req, res, next) {
             }
           })
         } else {
-          res.status(400)
-          res.json({ success: false })
+          res.status(400).json({ success: false, error: { email: { invalid: true } } })
         }
       }
     })

@@ -168,6 +168,7 @@ module.exports.loginUser = function (req, res, next){
 
 module.exports.removeLogin = function (req, res, next) {
   if (req.user) {
+    req.user = undefined
     res.json({ success: true })
   } else {
     res.status(401).json({ success: false })
@@ -185,45 +186,53 @@ module.exports.removeLogin = function (req, res, next) {
  * - If data is valid it will return success
  */
 module.exports.updatePassword = function (req, res, next) {
-  const oldPwd = req.body.oldPwd
-  const newPwd = req.body.newPwd
-  const confPwd = req.body.confPwd
+  const oldPwd = req.body.oldPassword
+  const newPwd = req.body.newPassword
+  const confPwd = req.body.confirmPassword
 
   if (newPwd !== confPwd) {
-    res.status(400)
-    return res.json({ success: false, error: { password: { mismatch: true } } })
+    return res.status(400).json({ success: false, error: { password: { mismatch: true } } })
   }
   if (newPwd.length < 8) {
-    res.status(400)
-    return res.json({ success: false, error: { password: { invalid: true } } })
+    return res.status(400).json({ success: false, error: { password: { invalid: true } } })
   }
 
-  bcrypt.compare(oldPwd, req.user.passwordHash, (err, result) => {
+  User.findById(req.user._id, (err, user) => { // find user
     if (err) {
-      return next(err)
+      next(err)
     } else {
-      if (result === true) {
-        hashPassword(newPwd, (err, hashedPwd) => {
-          if (err) {
-            next(err)
-          } else {
-            User.updateOne({ _id: req.user.id },
-              { $set: { passwordHash: hashedPwd } })
-              .exec((err) => {
-                if (err) {
-                  next(err)
-                } else {
-                  return res.json({ success: true })
-                }
-              })
+      // compare old and new
+      bcrypt.compare(oldPwd, user.passwordHash, (err, result) => {
+        if (err) {
+          return next(err)
+        } else {
+          if (result === true) {
+            hashPassword(newPwd, (err, hashedPwd) => {
+              if (err) {
+                next(err)
+              } else {
+                User.updateOne({ _id: req.user._id },
+                  { $set: { passwordHash: hashedPwd } })
+                  .exec((err, result) => {
+                    if (err) {
+                      next(err)
+                    } else {
+                      if (result.nModified === 1) {
+                        return res.json({ success: true })
+                      } else {
+                        return res.status(401).json({ success: true, error: { login: { absent: true } } })
+                      }
+                    }
+                  }) // user.updateOne
+              }
+            }) // hashPassword
+          } else { // result = false
+            return res.status(400).json({ success: false, error: { password: { incorrect: true } } })
           }
-        })
-      } else {
-        res.status(400)
-        return res.json({ success: false, error: { password: { incorrect: true } } })
-      }
+        }
+      }) // bcrypt
     }
-  })
+  }) //user
 }
 
 /**
@@ -237,22 +246,22 @@ module.exports.updatePassword = function (req, res, next) {
  * - If data is valid it will redirect to /
  */
 module.exports.setNewPassword = function (req, res, next) {
-  const userId = req.body.userId
-  const passStr = req.body.passStr
-  const newPwd = req.body.newPwd
-  const confPwd = req.body.confPwd
+  // const userId = req.body.userId
+  const passStr = req.params.passStr
+  const newPwd = req.body.password
+  const confPwd = req.body.confirmPassword
 
-  if (!mongoose.Types.ObjectId.isValid(userId)) {
-    return next()
-  }
+  console.log(passStr)
+
+  // if (!mongoose.Types.ObjectId.isValid(userId)) {
+  //   return res.status(400).json({ success: false, error: { userId: { invalid: true } } })
+  // }
 
   if (newPwd !== confPwd) {
-    res.status(400)
-    return res.json({ success: false, error: { password: { mismatch: true } } })
+    return res.status(400).json({ success: false, error: { password: { mismatch: true } } })
   }
   if (newPwd.length < 8) {
-    res.status(400)
-    return res.json({ success: false, error: { password: { valid: true } } })
+    return res.status(400).json({ success: false, error: { password: { invalid: true } } })
   }
 
   // salt and hash password
@@ -260,13 +269,17 @@ module.exports.setNewPassword = function (req, res, next) {
     if (err) {
       next(err)
     } else {
-      User.updateOne({ _id: userId, passResetString: passStr },
+      User.updateOne({ passResetString: passStr },
         { $set: { passwordHash: hashedPwd, passResetString: '' } })
         .exec((err, result) => {
           if (err) {
             next(err)
           } else {
-            res.json({ success: true })
+            if (result.nModified === 1) {
+              res.json({ success: true })
+            } else {
+              res.json({ success: false, error: { passwordResetStr: { invalid: true } } })
+            }
           }
         })
     }

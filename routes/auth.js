@@ -6,9 +6,9 @@ var UserController = require('../Controllers/UserController')
 module.exports = () => {
   var router = express.Router()
 
-  router.patch('/password/update', AuthController.updatePassword)
+  router.patch('/password', AuthController.updatePassword)
 
-  router.patch('/password/:str', AuthController.setNewPassword)
+  router.patch('/password/:passStr', AuthController.setNewPassword)
 
   router.post('/new', AuthController.createUser)
 
