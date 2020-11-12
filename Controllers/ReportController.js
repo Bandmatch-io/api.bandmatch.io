@@ -17,28 +17,28 @@ module.exports.createReport = function (req, res, next) {
 
   // Check that all required fields are present
   if (target === undefined) {
-    res.status(400)
-    return res.json({ success: false, error: { target: { absent: true } } })
+    return res.status(400).json({ success: false, error: { target: { absent: true } } })
   }
 
   if (reason === undefined) {
-    res.status(400)
-    return res.json({ success: false, error: { reason: { absent: true } } })
+    return res.status(400).json({ success: false, error: { reason: { absent: true } } })
   }
 
   // Check given ids are valid
   if (reportedConversation !== undefined) {
     if (!mongoose.Types.ObjectId.isValid(reportedConversation)) {
-      res.status(400)
-      return res.json({ success: false, error: { reportedConversation: { invalid: true } } })
+      return res.status(400).json({ success: false, error: { reportedConversation: { invalid: true } } })
     }
   }
 
   if (reportedUser !== undefined) {
     if (!mongoose.Types.ObjectId.isValid(reportedUser)) {
-      res.status(400)
-      return res.json({ success: false, error: { reportedUser: { invalid: true } } })
+      return res.status(400).json({ success: false, error: { reportedUser: { invalid: true } } })
     }
+  }
+
+  if (reportedUser === undefined && reportedConversation === undefined){
+    return res.status(400).json({ success: false, error: { reportTarget: { absent: true } } })
   }
 
   const report = new Report({
