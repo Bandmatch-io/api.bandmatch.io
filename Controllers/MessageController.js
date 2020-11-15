@@ -260,12 +260,22 @@ module.exports.deleteConvosForUser = function (id, next) {
       if (err) {
         next(err)
       } else {
-        convos.forEach((convo) => {
-          Message.deleteMany({ conversation: convo._id }).exec()
-          convo.deleteOne()
-        })
-
-        next()
+        let ids = convos.map(convo => convo._id)
+        Message.deleteMany({ conversation: { $in: ids } })
+          .exec((err) => {
+            if (err) {
+              next(err)
+            } else {
+              Conversation.deleteMany({ _id: { $in: ids } })
+                .exec((err) => {
+                  if (err) {
+                    next(err)
+                  } else {
+                    next(false)
+                  }
+                }) //conversation.deleteMany
+            }
+          }) // message.deleteMany
       }
-    })
+    }) //conversation.find
 }
