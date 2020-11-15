@@ -121,7 +121,7 @@ module.exports.getOtherUser = function (req, res, next) {
  *  type: JSON
  * ---
  */
-module.exports.getSelfUser = function (req, res) {
+module.exports.getSelfUser = function (req, res, next) {
   if (!mongoose.Types.ObjectId.isValid(req.user._id)) {
     return next()
   }
@@ -158,62 +158,66 @@ module.exports.updateSelfUser = function (req, res, next) {
     if (err) {
       next(err)
     } else {
-      if (req.body.displayName) {
-        if (req.body.displayName.length > 16) {
-          return res.status(400).json({ success: false, error: { displayName: { invalid: true } } })
+      if (!user) {
+        res.status(401).json({ success: false, error: { login: { invalid: true } } })
+      } else {
+        if (req.body.displayName) {
+          if (req.body.displayName.length > 16) {
+            return res.status(400).json({ success: false, error: { displayName: { invalid: true } } })
+          }
+          user.displayName = req.body.displayName
         }
-        user.displayName = req.body.displayName
-      }
-    
-      // function to clean genre and instruments
-      const cleanStr = (str) => { return str.toLowerCase().replace(/[^a-zA-Z\s]+/g, '') }
-    
-      if (req.body.genres) {
-        user.genres = req.body.genres.map(cleanStr)
-      }
-    
-      if (req.body.instruments) {
-        user.instruments = req.body.instruments.map(cleanStr)
-      }
-    
-      if (req.body.searchType) {
-        if (req.body.searchType === 'Form' || req.body.searchType === 'Join' ||
-          req.body.searchType === 'Either' || req.body.searchType === 'Recruit') {
-          user.searchType = req.body.searchType
-        } else {
-          return res.status(400).json({ success: false, error: { searchType: { invalid: true } } })
+      
+        // function to clean genre and instruments
+        const cleanStr = (str) => { return str.toLowerCase().replace(/[^a-zA-Z\s]+/g, '') }
+      
+        if (req.body.genres) {
+          user.genres = req.body.genres.map(cleanStr)
         }
-      }
-    
-      if (req.body.description) {
-        if (req.body.description.length > 512) {
-          return res.status(400).json({ success: false, error: { description: { invalid: true } } })
+      
+        if (req.body.instruments) {
+          user.instruments = req.body.instruments.map(cleanStr)
         }
-        user.description = req.body.description.trim()
-      }
-    
-      if (req.body.searchRadius) {
-        if (req.body.searchRadius < 0) {
-          return res.status(400).json({ success: false, error: { searchRadius: { negative: true } } })
+      
+        if (req.body.searchType) {
+          if (req.body.searchType === 'Form' || req.body.searchType === 'Join' ||
+            req.body.searchType === 'Either' || req.body.searchType === 'Recruit') {
+            user.searchType = req.body.searchType
+          } else {
+            return res.status(400).json({ success: false, error: { searchType: { invalid: true } } })
+          }
         }
-        user.searchRadius = req.body.searchRadius
-      }
-    
-      if (req.body.searchLocation.coordinates) {
-        user.searchLocation.coordinates = req.body.searchLocation.coordinates
-      }
-    
-      if (req.body.active) {
-        user.active = req.body.active
-      }
-    
-      user.save((err, user) => {
-        if (err) {
-          next(err)
-        } else {
-          res.json({ success: true, user: sanitiseUser(user) })
+      
+        if (req.body.description) {
+          if (req.body.description.length > 512) {
+            return res.status(400).json({ success: false, error: { description: { invalid: true } } })
+          }
+          user.description = req.body.description.trim()
         }
-      })
+      
+        if (req.body.searchRadius) {
+          if (req.body.searchRadius < 0) {
+            return res.status(400).json({ success: false, error: { searchRadius: { negative: true } } })
+          }
+          user.searchRadius = req.body.searchRadius
+        }
+      
+        if (req.body.searchLocation.coordinates) {
+          user.searchLocation.coordinates = req.body.searchLocation.coordinates
+        }
+      
+        if (req.body.active) {
+          user.active = req.body.active
+        }
+      
+        user.save((err, user) => {
+          if (err) {
+            next(err)
+          } else {
+            res.json({ success: true, user: sanitiseUser(user) })
+          }
+        })
+      }
     }
   })
 }
@@ -242,7 +246,6 @@ module.exports.deleteUser = function (req, res, next) {
           if (err) {
             next(err)
           } else {
-            req.logout()
             res.json({ success: true })
           }
         })

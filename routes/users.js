@@ -20,15 +20,13 @@ module.exports = () => {
   /**
    * ---
    * $route:
-   *  method: POST
-   *  endpoint: /users/block/:id
-   * $params:
-   *  The id of the user to block.
+   *  method: DELETE
+   *  endpoint: /
    * $returns:
    *  description: success
    *  type: JSON
    * ---
-   * Adds a user to a blocked list
+   * Deletes the logged in user in the database
    */
   router.delete('/', UserController.deleteUser)
 
