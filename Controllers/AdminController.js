@@ -16,7 +16,7 @@ module.exports.getReports = function (req, res, next) {
   // Gets all reports
   Report.find({}, (err, reports) => {
     if (err) {
-      res.json({ success: false })
+      next(err)
     } else {
       res.json({ success: true, reports: reports })
     }
@@ -33,12 +33,12 @@ module.exports.getReports = function (req, res, next) {
  */
 module.exports.deleteReport = function (req, res, next) {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    return res.json({ success: false })
+    return res.status(401).json({ success: false })
   }
 
   Report.deleteOne({ _id: req.params.id }, (err) => {
     if (err) {
-      res.json({ success: false })
+      next(err)
     } else {
       res.json({ success: true })
     }
@@ -61,7 +61,7 @@ module.exports.searchUsers = function (req, res, next) {
     .select('_id displayName email')
     .exec((err, users) => {
       if (err) {
-        res.json({ success: false })
+        next(err)
       } else {
         res.json({ success: true, users: users })
       }
@@ -78,13 +78,13 @@ module.exports.searchUsers = function (req, res, next) {
  */
 module.exports.clearUserDescription = function (req, res, next) {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    return res.json({ success: false })
+    return res.status(401).json({ success: false })
   }
 
   User.updateOne({ _id: req.params.id }, { $set: { description: '' } })
     .exec((err, user) => {
       if (err) {
-        res.json({ success: false })
+        next(err)
       } else {
         res.json({ success: true })
       }
@@ -101,13 +101,13 @@ module.exports.clearUserDescription = function (req, res, next) {
  */
 module.exports.clearUserName = function (req, res, next) {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    return res.json({ success: false })
+    return res.status(401).json({ success: false })
   }
 
   User.updateOne({ _id: req.params.id }, { $set: { displayName: 'No Name' } })
     .exec((err, user) => {
       if (err) {
-        res.json({ success: false })
+        next(err)
       } else {
         res.json({ success: true })
       }
@@ -124,14 +124,14 @@ module.exports.clearUserName = function (req, res, next) {
  */
 module.exports.deleteUser = function (req, res, next) {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    return res.json({ success: false })
+    return res.status(401).json({ success: false })
   }
 
   User.findById(req.params.id)
     .deleteOne()
     .exec((err, user) => {
       if (err) {
-        res.json({ success: false })
+        next(err)
       } else {
         MessageController.deleteConvosForUser(req.params.id, (err) => {
           if (err) {
@@ -154,12 +154,12 @@ module.exports.deleteUser = function (req, res, next) {
  */
 module.exports.promoteUser = function (req, res, next) {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    return res.json({ success: false })
+    return res.status(401).json({ success: false })
   }
 
   User.updateOne({ _id: req.params.id }, { $set: { admin: true } }, (err) => {
     if (err) {
-      res.json({ success: false })
+      next(err)
     } else {
       res.json({ success: true })
     }
@@ -176,12 +176,12 @@ module.exports.promoteUser = function (req, res, next) {
  */
 module.exports.demoteUser = function (req, res, next) {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    return res.json({ success: false })
+    return res.status(401).json({ success: false })
   }
 
   User.updateOne({ _id: req.params.id }, { $set: { admin: false } }, (err) => {
     if (err) {
-      res.json({ success: false })
+      next(err)
     } else {
       res.json({ success: true })
     }
@@ -202,7 +202,7 @@ module.exports.getDailyStats = function (req, res, next) {
   const day = req.query.d
 
   if (year === undefined || month === undefined || day === undefined) {
-    return res.json({ success: false })
+    return res.status(401).json({ success: false })
   }
 
   // find the stats for the day specified.
@@ -211,7 +211,7 @@ module.exports.getDailyStats = function (req, res, next) {
     '-referrers',
     (err, stats) => {
       if (err) {
-        res.json({ success: false })
+        next(err)
       } else {
         if (!stats) {
           res.json({ success: false })
@@ -236,7 +236,7 @@ module.exports.getPeriodStats = function (req, res, next) {
   const day = req.query.d
   const period = req.query.p
   if (year === undefined || month === undefined || day === undefined || period === undefined) {
-    return res.json({ success: false })
+    return res.status(401).json({ success: false })
   }
 
   const endDate = new Date(Date.UTC(year, month - 1, day))
@@ -250,8 +250,7 @@ module.exports.getPeriodStats = function (req, res, next) {
     }
   }, '-referrers', (err, stats) => {
     if (err) {
-      console.log(err)
-      res.json({ success: false })
+      next(err)
     } else {
       if (!stats) {
         res.json({ success: false })
@@ -282,7 +281,7 @@ module.exports.locationData = function (req, res, next) {
     .select('searchLocation')
     .exec((err, users) => {
       if (err) {
-        res.json({ success: false })
+        next(err)
       } else {
         res.json({ success: true, locations: users })
       }
@@ -304,7 +303,7 @@ module.exports.refData = function (req, res, next) {
   const period = req.query.p
 
   if (year === undefined || month === undefined || day === undefined || period === undefined) {
-    return res.json({ success: false })
+    return res.status(401).json({ success: false })
   }
 
   const endDate = new Date(Date.UTC(year, month - 1, day))
@@ -318,7 +317,7 @@ module.exports.refData = function (req, res, next) {
     }
   }, 'referrers', (err, stats) => {
     if (err) {
-      res.json({ success: false })
+      next(err)
     } else {
       if (!stats) {
         res.json({ success: false })
@@ -327,64 +326,4 @@ module.exports.refData = function (req, res, next) {
       }
     }
   })
-}
-
-/**
- * ---
- * $returns:
- *  description: The referral page
- *  type: HTML
- * ---
- * Renders the referral page
- */
-module.exports.viewReferrals = function (req, res, next) {
-  res.render('admin/adminrefs', { title: 'Referrals | Admin' })
-}
-
-/**
- * ---
- * $returns:
- *  description: The admin users page
- *  type: HTML
- * ---
- * Renders the admin users page
- */
-module.exports.viewUsers = function (req, res, next) {
-  res.render('admin/adminusers', { title: 'Users | Admin' })
-}
-
-/**
- * ---
- * $returns:
- *  description: The admin location page
- *  type: HTML
- * ---
- * Renders the admin locations page
- */
-module.exports.viewLocations = function (req, res, next) {
-  res.render('admin/adminmap', { title: 'Locations | Admin' })
-}
-
-/**
- * ---
- * $returns:
- *  description: The admin dashboard
- *  type: HTML
- * ---
- * Renders the admin dashboard page
- */
-module.exports.viewDashboard = function (req, res, next) {
-  res.render('admin/admindash', { title: 'Dashboard | Admin' })
-}
-
-/**
- * ---
- * $returns:
- *  description: The admin reports page
- *  type: HTML
- * ---
- * Renders the admin reports page
- */
-module.exports.viewReports = function (req, res, next) {
-  res.render('admin/adminreports', { title: 'Reports | Admin' })
 }
