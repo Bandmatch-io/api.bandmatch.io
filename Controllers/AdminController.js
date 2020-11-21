@@ -56,8 +56,17 @@ module.exports.deleteReport = function (req, res, next) {
 module.exports.searchUsers = function (req, res, next) {
   const query = req.query.q
 
+  let re = undefined
+  try {
+    re = new RegExp(query)
+  }
+  catch (e) {
+    res.status(200).json({ success: false })
+    return
+  }
+
   // Find all users
-  User.find({ $text: { $search: query }, _id: { $ne: req.user._id } })
+  User.find({ $or: [{ displayName: re }, { email: re }], _id: { $ne: req.user._id } })
     .select('_id displayName email')
     .exec((err, users) => {
       if (err) {
