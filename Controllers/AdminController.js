@@ -14,7 +14,10 @@ const mongoose = require('mongoose')
  */
 module.exports.getReports = function (req, res, next) {
   // Gets all reports
-  Report.find({}, (err, reports) => {
+  Report.find({})
+  .populate('reportedUser')
+  .populate('reportedConversation')
+  .exec((err, reports) => {
     if (err) {
       next(err)
     } else {

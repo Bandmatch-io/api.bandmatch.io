@@ -25,6 +25,7 @@ module.exports = () => {
   router.use('/users', require('./users'))
   router.use('/analytics', require('./analytics'))
   router.use('/newsletters', require('./newsletters'))
+  router.use('/reports', require('./reports'))
 
   return router
 }
