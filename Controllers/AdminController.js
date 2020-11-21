@@ -137,15 +137,15 @@ module.exports.clearUserName = function (req, res, next) {
 module.exports.deleteUser = function (req, res, next) {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(401).json({ success: false })
+  
   }
-
-  User.findById(req.params.id)
-    .deleteOne()
-    .exec((err, user) => {
+  MessageController.deleteConvosForUser(req.params.id, (err) => {
       if (err) {
         next(err)
       } else {
-        MessageController.deleteConvosForUser(req.params.id, (err) => {
+        User.findById(req.params.id)
+        .deleteOne()
+        .exec((err, user) => {
           if (err) {
             next(err)
           } else {
