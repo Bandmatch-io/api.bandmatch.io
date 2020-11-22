@@ -8,4 +8,6 @@ router.get('/daily', AdminController.getDailyStats)
 
 router.get('/period', AdminController.getPeriodStats)
 
+router.get('/referrals', AdminController.refData)
+
 module.exports = router

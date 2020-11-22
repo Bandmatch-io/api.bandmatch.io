@@ -58,10 +58,6 @@ var StatController = require('./Controllers/StatController')
 
 
 app.all('*', function (req, res, next) {
-  if (req.query.ref) {
-    StatController.addReferrer(req.query.ref)
-  }
-
   let allowThrough = false
   wl.forEach((url) => {
     const regex = new RegExp(url, 'g')
@@ -98,6 +94,13 @@ app.use('/users', usersRouter)
 app.use('/conversations', conversationsRouter)
 app.use('/reports', reportsRouter)
 app.use('/admin', adminRouter)
+
+app.post('/ref', (req, res, next) => {
+  if (req.query.r) {
+    StatController.addReferrer(req.query.r)
+  }
+  res.json({ success: true })
+})
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
