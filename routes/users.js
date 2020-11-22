@@ -13,6 +13,8 @@ module.exports = () => {
 
   router.get('/profile/:id', UserController.getOtherUser)
 
+  router.get('/admins/list', UserController.getAdmins)
+
   router.patch('/profile', UserController.updateSelfUser)
 
   router.patch('/password/request', UserController.requestNewPassword)

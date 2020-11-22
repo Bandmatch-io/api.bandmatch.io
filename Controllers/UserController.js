@@ -252,3 +252,15 @@ module.exports.deleteUser = function (req, res, next) {
       }
     })
 }
+
+module.exports.getAdmins = function (req, res, next) {
+  User.find({ admin: true })
+  .select('_id, displayName')
+  .exec((err, users) => {
+    if (err) {
+      next(err)
+    } else {
+      res.json({ success: true, users: users })
+    }
+  })
+}
