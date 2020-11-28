@@ -1,8 +1,8 @@
-var express = require('express')
-var MessageController = require('../Controllers/MessageController')
+const express = require('express')
+const MessageController = require('../Controllers/MessageController')
 
 module.exports = () => {
-  var router = express.Router()
+  const router = express.Router()
 
   router.get('/unread', MessageController.unreadMessageCount)
 
@@ -16,7 +16,6 @@ module.exports = () => {
   router.delete('/:id', MessageController.deleteConvo)
 
   router.patch('/read/:id', MessageController.markAsRead)
-
 
   return router
 }

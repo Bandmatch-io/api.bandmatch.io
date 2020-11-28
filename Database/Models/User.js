@@ -1,8 +1,8 @@
-var mongoose = require('mongoose')
-var Schema = mongoose.Schema
+const mongoose = require('mongoose')
+const Schema = mongoose.Schema
 const StatController = require('../../Controllers/StatController')
 
-var userSchema = new Schema({
+const userSchema = new Schema({
   email: { type: String, required: true, unique: true, maxlength: 254 },
   passwordHash: { type: String, required: true },
   displayName: { type: String, required: true, maxlength: 16 },

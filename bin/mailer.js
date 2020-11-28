@@ -110,7 +110,7 @@ module.exports = (opts) => {
             debug(`Preview URL: ${nodemailer.getTestMessageUrl(info)}`)
 
             if (callback) {
-              return callback(false, info)
+              return callback(undefined, info)
             }
           }
         })

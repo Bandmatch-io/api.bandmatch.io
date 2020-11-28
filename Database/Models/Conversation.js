@@ -1,8 +1,8 @@
-var mongoose = require('mongoose')
-var Schema = mongoose.Schema
-var ObjectId = mongoose.ObjectId
+const mongoose = require('mongoose')
+const Schema = mongoose.Schema
+const ObjectId = mongoose.ObjectId
 
-var convSchema = new Schema({
+const convSchema = new Schema({
   participants: [{ type: ObjectId, ref: 'User' }],
   lastMessage: { type: ObjectId, ref: 'Message' }
 })

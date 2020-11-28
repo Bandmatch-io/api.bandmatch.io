@@ -1,31 +1,31 @@
-var createError = require('http-errors')
-var express = require('express')
-var cookieParser = require('cookie-parser')
-var logger = require('morgan')
-var debug = require('debug')('band-match:api')
-var compression = require('compression')
-var config = require('config')
-var cors = require('cors')
-var helmet = require('helmet')
+const createError = require('http-errors')
+const express = require('express')
+const cookieParser = require('cookie-parser')
+const logger = require('morgan')
+const debug = require('debug')('band-match:api')
+const compression = require('compression')
+const config = require('config')
+const cors = require('cors')
+const helmet = require('helmet')
 
-var airbrake = require('./bin/airbrake')()
+const airbrake = require('./bin/airbrake')()
 // var passport = require('./bin/passport')()
-var jwt = require('./bin/jwt')
+const jwt = require('./bin/jwt')
 
-var indexRouter = require('./routes/index')()
-var usersRouter = require('./routes/users')()
-var conversationsRouter = require('./routes/conversations')()
-var reportsRouter = require('./routes/reports')()
-var adminRouter = require('./routes/admin/index')()
-var authRouter = require('./routes/auth')()
+const indexRouter = require('./routes/index')()
+const usersRouter = require('./routes/users')()
+const conversationsRouter = require('./routes/conversations')()
+const reportsRouter = require('./routes/reports')()
+const adminRouter = require('./routes/admin/index')()
+const authRouter = require('./routes/auth')()
 
-var app = express()
+const app = express()
 
 app.use(compression())
 
 app.use(helmet())
 
-var corsOptions = {
+const corsOptions = {
   origin: 'http://localhost:3000',
   optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
   credentials: true
@@ -53,9 +53,8 @@ app.use(cookieParser())
 
 app.use(airbrake.middleware)
 
-var wl = config.get('anon_whitelist')
-var StatController = require('./Controllers/StatController')
-
+const wl = config.get('anon_whitelist')
+const StatController = require('./Controllers/StatController')
 
 app.all('*', function (req, res, next) {
   let allowThrough = false
@@ -70,9 +69,9 @@ app.all('*', function (req, res, next) {
   }
 
   if (req.headers.authorization !== undefined) {
-    let token = req.headers.authorization.split(" ")[1]
+    const token = req.headers.authorization.split(' ')[1]
     if (token !== undefined) {
-      let decoded = jwt.verifyTokenSync(token)
+      const decoded = jwt.verifyTokenSync(token)
       if (decoded) {
         req.user = {
           _id: decoded.sub._id
@@ -82,7 +81,6 @@ app.all('*', function (req, res, next) {
   }
 
   if (req.user === undefined) {
-    // res.status(401)
     return res.status(401).json({ success: false, error: { login: { absent: true } } })
   }
   return next()
@@ -118,7 +116,7 @@ app.use(function (err, req, res, next) {
   // res.render('error')
   if (req.app.get('env') !== 'production') {
     console.error(err)
-    res.json({ status: 500, reason: err})
+    res.json({ status: 500, reason: err })
   } else {
     res.json({ status: err.status || 500 })
   }

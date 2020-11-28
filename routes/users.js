@@ -1,13 +1,13 @@
-var express = require('express')
-var mongoose = require('mongoose')
+const express = require('express')
+const mongoose = require('mongoose')
 
-var UserController = require('../Controllers/UserController')
+const UserController = require('../Controllers/UserController')
 
-var User = require('../Database/Models/User')
-var Conversation = require('../Database/Models/Conversation')
+const User = require('../Database/Models/User')
+const Conversation = require('../Database/Models/Conversation')
 
 module.exports = () => {
-  var router = express.Router()
+  const router = express.Router()
 
   router.get('/profile', UserController.getSelfUser)
 

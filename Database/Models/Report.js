@@ -1,8 +1,8 @@
-var mongoose = require('mongoose')
-var Schema = mongoose.Schema
-var ObjectId = mongoose.ObjectId
+const mongoose = require('mongoose')
+const Schema = mongoose.Schema
+const ObjectId = mongoose.ObjectId
 
-var reportSchema = new Schema({
+const reportSchema = new Schema({
   target: { type: String, enum: ['User', 'Conversation'], required: true },
   reportedUser: { type: ObjectId, ref: 'User' },
   reportedConversation: { type: ObjectId, ref: 'Conversation' },

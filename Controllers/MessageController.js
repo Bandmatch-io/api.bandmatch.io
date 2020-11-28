@@ -52,7 +52,7 @@ module.exports.sendMessage = function (req, res, next) {
   Conversation.findOneAndUpdate({
     $or: [
       { participants: { $eq: [req.user._id, recipientID] } },
-      { participants: { $eq: [recipientID, req.user._id] } },
+      { participants: { $eq: [recipientID, req.user._id] } }
     ]
   },
   { $set: { participants: [req.user._id, recipientID] } }, // set participants
@@ -72,11 +72,11 @@ module.exports.sendMessage = function (req, res, next) {
               if (err) {
                 next(err)
               } else {
-                Message.populate(msg, { path: "sender" }, (err, popMsg) => {
+                Message.populate(msg, { path: 'sender' }, (err, popMsg) => {
                   if (err) {
                     next(err)
                   } else {
-                    Conversation.populate(conversation, 
+                    Conversation.populate(conversation,
                       [
                         { path: 'participants', select: 'displayName' },
                         { path: 'lastMessage', select: 'read _id sender timestamp' }
@@ -172,9 +172,9 @@ module.exports.unreadMessageCount = function (req, res, next) {
         } else {
         // Get the number of conversations where the last message was not sent by the logged in user, read = false
           const count = conversations.filter((c) => {
-            let msgExists = c.lastMessage !== undefined
-            let unread = !c.lastMessage.read
-            let isntme = c.lastMessage.sender._id.toString() !== req.user._id.toString()
+            const msgExists = c.lastMessage !== undefined
+            const unread = !c.lastMessage.read
+            const isntme = c.lastMessage.sender._id.toString() !== req.user._id.toString()
             return msgExists && unread && isntme
           }).length
           res.json({ success: true, count: count })
@@ -260,7 +260,7 @@ module.exports.deleteConvosForUser = function (id, next) {
       if (err) {
         next(err)
       } else {
-        let ids = convos.map(convo => convo._id)
+        const ids = convos.map(convo => convo._id)
         Message.deleteMany({ conversation: { $in: ids } })
           .exec((err) => {
             if (err) {
@@ -273,9 +273,9 @@ module.exports.deleteConvosForUser = function (id, next) {
                   } else {
                     next(false)
                   }
-                }) //conversation.deleteMany
+                }) // conversation.deleteMany
             }
           }) // message.deleteMany
       }
-    }) //conversation.find
+    }) // conversation.find
 }

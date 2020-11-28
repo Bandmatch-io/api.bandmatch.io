@@ -1,10 +1,8 @@
-var express = require('express')
-var AuthController = require('../Controllers/AuthController')
-var StatController = require('../Controllers/StatController')
-var UserController = require('../Controllers/UserController')
+const express = require('express')
+const AuthController = require('../Controllers/AuthController')
 
 module.exports = () => {
-  var router = express.Router()
+  const router = express.Router()
 
   router.patch('/password', AuthController.updatePassword)
 

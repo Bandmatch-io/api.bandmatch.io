@@ -1,16 +1,14 @@
-var User = require('../Database/Models/User')
-var MailController = require('./MailController')
-var bcrypt = require('bcrypt')
-var crs = require('crypto-random-string')
-var UserController = require('./UserController')
-var mongoose = require('mongoose')
-var jwt = require('../bin/jwt')
+const User = require('../Database/Models/User')
+const MailController = require('./MailController')
+const bcrypt = require('bcrypt')
+const crs = require('crypto-random-string')
+const jwt = require('../bin/jwt')
 
 // Changing this will result in people not being able to log into the system.
 // Should be in config, but the opportunity has passed.
 const saltRounds = 10
 
-var hashPassword = function (plaintext, done) {
+const hashPassword = function (plaintext, done) {
   bcrypt.genSalt(saltRounds, (err, salt) => {
     if (err) {
       done(err)
@@ -129,37 +127,37 @@ module.exports.createUser = function (req, res, next) {
   })
 }
 
-module.exports.loginUser = function (req, res, next){
+module.exports.loginUser = function (req, res, next) {
   if (req.body.email === undefined) {
-    return res.status(400).json({ success: false, error: { email: { missing: true } }})
+    return res.status(400).json({ success: false, error: { email: { missing: true } } })
   }
   if (req.body.password === undefined) {
-    return res.status(400).json({ success: false, error: { password: { missing: true } }})
+    return res.status(400).json({ success: false, error: { password: { missing: true } } })
   }
-  let email = req.body.email.toLowerCase()
-  let password = req.body.password
+  const email = req.body.email.toLowerCase()
+  const password = req.body.password
   User.findOne({ email: email }, function (err, user) {
+    if (err) {
+      return next(err)
+    }
+    if (!user) {
+      return res.status(400).json({ success: false, error: { email: { invalid: true } } })
+    }
+    bcrypt.compare(password, user.passwordHash, (err, result) => {
       if (err) {
         return next(err)
-      }
-      if (!user) {
-        return res.status(400).json({ success: false, error: { email: { invalid: true } }})
-      }
-      bcrypt.compare(password, user.passwordHash, (err, result) => {
-        if (err) {
-          return next(err)
+      } else {
+        if (result === true) {
+          jwt.issueToken({ _id: user._id }, (err, token) => {
+            if (err) {
+              return next(err)
+            } else {
+              return res.json({ success: true, token: token })
+            }
+          })
+          // return done(null, user) // needs full user, not just id for serialize/deserialize
         } else {
-          if (result === true) {
-            jwt.issueToken({ _id: user._id }, (err, token) => {
-              if (err) {
-                return next(err)
-              } else {
-                return res.json({ success: true, token: token })
-              }
-            })
-            // return done(null, user) // needs full user, not just id for serialize/deserialize
-          } else {
-            return res.status(400).json({ success: false, error: { password: { incorrect: true } }})
+          return res.status(400).json({ success: false, error: { password: { incorrect: true } } })
         }
       }
     })
@@ -232,7 +230,7 @@ module.exports.updatePassword = function (req, res, next) {
         }
       }) // bcrypt
     }
-  }) //user
+  }) // user
 }
 
 /**
@@ -250,8 +248,6 @@ module.exports.setNewPassword = function (req, res, next) {
   const passStr = req.params.passStr
   const newPwd = req.body.password
   const confPwd = req.body.confirmPassword
-
-  console.log(passStr)
 
   // if (!mongoose.Types.ObjectId.isValid(userId)) {
   //   return res.status(400).json({ success: false, error: { userId: { invalid: true } } })

@@ -1,5 +1,5 @@
-var session = require('express-session')
-var MongoDBStore = require('connect-mongodb-session')(session)
+const session = require('express-session')
+const MongoDBStore = require('connect-mongodb-session')(session)
 const config = require('config')
 
 /**
@@ -23,7 +23,7 @@ module.exports = function (callback) {
     } else {
       url = `mongodb://${sessionsDB.user}:${sessionsDB.pwd}@${sessionsDB.url}:${sessionsDB.port}/${sessionsDB.db}`
     }
-    var store = new MongoDBStore({
+    const store = new MongoDBStore({
       uri: url,
       collection: 'userSessions',
       connectionOptions: {

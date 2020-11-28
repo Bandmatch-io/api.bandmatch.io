@@ -1,8 +1,8 @@
-var User = require('../Database/Models/User')
-var mongoose = require('mongoose')
-var crs = require('crypto-random-string')
-var MailController = require('./MailController')
-var MessageController = require('./MessageController')
+const User = require('../Database/Models/User')
+const mongoose = require('mongoose')
+const crs = require('crypto-random-string')
+const MailController = require('./MailController')
+const MessageController = require('./MessageController')
 
 /**
  * ---
@@ -167,18 +167,18 @@ module.exports.updateSelfUser = function (req, res, next) {
           }
           user.displayName = req.body.displayName
         }
-      
+
         // function to clean genre and instruments
         const cleanStr = (str) => { return str.toLowerCase().replace(/[^a-zA-Z\s]+/g, '') }
-      
+
         if (req.body.genres) {
           user.genres = req.body.genres.map(cleanStr)
         }
-      
+
         if (req.body.instruments) {
           user.instruments = req.body.instruments.map(cleanStr)
         }
-      
+
         if (req.body.searchType) {
           if (req.body.searchType === 'Form' || req.body.searchType === 'Join' ||
             req.body.searchType === 'Either' || req.body.searchType === 'Recruit') {
@@ -187,29 +187,29 @@ module.exports.updateSelfUser = function (req, res, next) {
             return res.status(400).json({ success: false, error: { searchType: { invalid: true } } })
           }
         }
-      
+
         if (req.body.description) {
           if (req.body.description.length > 512) {
             return res.status(400).json({ success: false, error: { description: { invalid: true } } })
           }
           user.description = req.body.description.trim()
         }
-      
+
         if (req.body.searchRadius) {
           if (req.body.searchRadius < 0) {
             return res.status(400).json({ success: false, error: { searchRadius: { negative: true } } })
           }
           user.searchRadius = req.body.searchRadius
         }
-      
+
         if (req.body.searchLocation.coordinates) {
           user.searchLocation.coordinates = req.body.searchLocation.coordinates
         }
-      
+
         if (req.body.active) {
           user.active = req.body.active
         }
-      
+
         user.save((err, user) => {
           if (err) {
             next(err)
@@ -255,12 +255,12 @@ module.exports.deleteUser = function (req, res, next) {
 
 module.exports.getAdmins = function (req, res, next) {
   User.find({ admin: true })
-  .select('_id, displayName')
-  .exec((err, users) => {
-    if (err) {
-      next(err)
-    } else {
-      res.json({ success: true, users: users })
-    }
-  })
+    .select('_id, displayName')
+    .exec((err, users) => {
+      if (err) {
+        next(err)
+      } else {
+        res.json({ success: true, users: users })
+      }
+    })
 }

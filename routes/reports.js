@@ -1,9 +1,9 @@
-var express = require('express')
+const express = require('express')
 
-var ReportController = require('../Controllers/ReportController')
+const ReportController = require('../Controllers/ReportController')
 
 module.exports = () => {
-  var router = express.Router()
+  const router = express.Router()
 
   /**
    * ---

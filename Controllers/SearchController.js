@@ -52,7 +52,7 @@ module.exports.search = function (req, res, next) {
             next(err)
           } else {
             res.json({ success: true, matches: users })
-    
+
             if (!currUser.admin) { // Don't incremement stat is admin
               StatController.incrementStat('searches')
             }

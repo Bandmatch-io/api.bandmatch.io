@@ -1,8 +1,8 @@
-var express = require('express')
+const express = require('express')
 const User = require('../../Database/Models/User')
 
 module.exports = () => {
-  var router = express.Router()
+  const router = express.Router()
 
   router.all('*', (req, res, next) => {
     User.findById(req.user._id, (err, user) => {

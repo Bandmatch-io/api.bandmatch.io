@@ -1,5 +1,5 @@
 const mongoose = require('mongoose')
-var debug = require('debug')('api.bandmatch.io:db')
+const debug = require('debug')('api.bandmatch.io:db')
 
 const config = require('config')
 

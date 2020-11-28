@@ -1,7 +1,7 @@
-var mongoose = require('mongoose')
-var Schema = mongoose.Schema
+const mongoose = require('mongoose')
+const Schema = mongoose.Schema
 
-var statSchema = new Schema({
+const statSchema = new Schema({
   date: { type: Date, unique: true },
   messagesSent: { type: Number, default: 0 },
   logins: { type: Number, default: 0 },

@@ -15,15 +15,15 @@ const mongoose = require('mongoose')
 module.exports.getReports = function (req, res, next) {
   // Gets all reports
   Report.find({})
-  .populate('reportedUser')
-  .populate('reportedConversation')
-  .exec((err, reports) => {
-    if (err) {
-      next(err)
-    } else {
-      res.json({ success: true, reports: reports })
-    }
-  })
+    .populate('reportedUser')
+    .populate('reportedConversation')
+    .exec((err, reports) => {
+      if (err) {
+        next(err)
+      } else {
+        res.json({ success: true, reports: reports })
+      }
+    })
 }
 
 /**
@@ -59,11 +59,10 @@ module.exports.deleteReport = function (req, res, next) {
 module.exports.searchUsers = function (req, res, next) {
   const query = req.query.q
 
-  let re = undefined
+  let re
   try {
     re = new RegExp(query)
-  }
-  catch (e) {
+  } catch (e) {
     res.status(200).json({ success: false })
     return
   }
@@ -137,13 +136,12 @@ module.exports.clearUserName = function (req, res, next) {
 module.exports.deleteUser = function (req, res, next) {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
     return res.status(401).json({ success: false })
-  
   }
   MessageController.deleteConvosForUser(req.params.id, (err) => {
-      if (err) {
-        next(err)
-      } else {
-        User.findById(req.params.id)
+    if (err) {
+      next(err)
+    } else {
+      User.findById(req.params.id)
         .deleteOne()
         .exec((err, user) => {
           if (err) {
@@ -152,8 +150,8 @@ module.exports.deleteUser = function (req, res, next) {
             res.json({ success: true })
           }
         })
-      }
-    })
+    }
+  })
 }
 
 /**

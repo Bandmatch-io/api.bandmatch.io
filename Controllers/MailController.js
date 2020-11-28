@@ -26,7 +26,7 @@ module.exports.sendNewMessageEmail = function (email, convoID, callback) {
       if (err) {
         callback(err)
       } else {
-        callback(false, info)
+        callback(undefined, info)
       }
     }
   })
@@ -57,7 +57,7 @@ module.exports.sendRequestPassEmail = function (email, passStr, callback) {
       if (err) {
         callback(err)
       } else {
-        callback(false, info)
+        callback(undefined, info)
       }
     }
   })
@@ -88,7 +88,7 @@ module.exports.sendNewUserEmail = function (email, confString, callback) {
       if (err) {
         callback(err)
       } else {
-        callback(false, info)
+        callback(undefined, info)
       }
     }
   })

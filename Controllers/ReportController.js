@@ -37,7 +37,7 @@ module.exports.createReport = function (req, res, next) {
     }
   }
 
-  if (reportedUser === undefined && reportedConversation === undefined){
+  if (reportedUser === undefined && reportedConversation === undefined) {
     return res.status(400).json({ success: false, error: { reportTarget: { absent: true } } })
   }
 
