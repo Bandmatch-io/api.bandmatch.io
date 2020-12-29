@@ -8,46 +8,50 @@ module.exports = (opts) => {
   const mailCFG = config.get('Mailer')
   let transporter
 
-  if (mailCFG.test === true) {
-    debug('Using fake mailer')
-    nodemailer.createTestAccount((err, account) => {
-      if (err) {
-        debug(err)
-      } else {
-        // create reusable transporter object using the default SMTP transport
-        transporter = nodemailer.createTransport({
-          host: 'smtp.ethereal.email',
-          port: 587,
-          secure: false, // true for 465, false for other ports
-          auth: {
-            user: account.user, // generated ethereal user
-            pass: account.pass // generated ethereal password
-          }
-        })
-
-        transporter.use('compile', htmlToText())
-      }
-    })
-  } else {
-    debug(`using ${mailCFG.host}:${mailCFG.port}`)
-    transporter = nodemailer.createTransport({
-      host: mailCFG.host,
-      port: mailCFG.port,
-      secure: true, // true for 465, false for other ports
-      auth: {
-        user: mailCFG.auth.user, // generated ethereal user
-        pass: mailCFG.auth.pass // generated ethereal password
-      }
-    })
-
-    transporter.verify((err, success) => {
-      if (err) {
-        debug(err)
-      } else {
-        debug('Verified with server')
-        transporter.use('compile', htmlToText())
-      }
-    })
+  const createTransport = function() {
+    debug("Creating transport")
+    if (mailCFG.test === true) {
+      debug('Using fake mailer')
+      nodemailer.createTestAccount((err, account) => {
+        if (err) {
+          debug(err)
+        } else {
+          // create reusable transporter object using the default SMTP transport
+          transporter = nodemailer.createTransport({
+            host: 'smtp.ethereal.email',
+            port: 587,
+            secure: false, // true for 465, false for other ports
+            auth: {
+              user: account.user, // generated ethereal user
+              pass: account.pass // generated ethereal password
+            }
+          })
+  
+          transporter.use('compile', htmlToText())
+        }
+      })
+    } else {
+      debug(`using ${mailCFG.host}:${mailCFG.port}`)
+      transporter = nodemailer.createTransport({
+        host: mailCFG.host,
+        port: mailCFG.port,
+        secure: true, // true for 465, false for other ports
+        auth: {
+          user: mailCFG.auth.user, // generated ethereal user
+          pass: mailCFG.auth.pass // generated ethereal password
+        },
+        socketTimeout: mailCFG.inactivityLengthMinutes * 60 * 1000
+      })
+  
+      transporter.verify((err, success) => {
+        if (err) {
+          debug(err)
+        } else {
+          debug('Verified with server')
+          transporter.use('compile', htmlToText())
+        }
+      })
+    }
   }
 
   /**
@@ -60,7 +64,7 @@ module.exports = (opts) => {
    *    data: Information on the email sent.
    * ---
    */
-  const sendMail = function (options, callback) {
+  const sendMail = function(options, callback) {
     if (!options.recipient) {
       if (callback) {
         return callback(new Error('No recipient'), null)
@@ -100,7 +104,12 @@ module.exports = (opts) => {
           html: html // html body
         }, (err, info) => {
           if (err) {
-            if (callback) {
+            if (err.code === 'ETIMEDOUT' && err.command === 'CONN') {
+              debug("Socket timed out")
+              createTransport()
+              sendMail(options, callback)
+            }
+            else if (callback) {
               return callback(err)
             }
           } else {
@@ -117,6 +126,11 @@ module.exports = (opts) => {
       }
     })
   }
+
+  /**
+   * Create the transporter object
+   */
+  createTransport()
 
   return { sendMail: sendMail }
 }
