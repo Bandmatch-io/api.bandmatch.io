@@ -19,6 +19,7 @@ const sanitiseUser = function (user) {
     _id: user._id,
     displayName: user.displayName,
     email: user.email,
+    emailVerified: user.emailConfirmed,
     genres: user.genres,
     instruments: user.instruments,
     active: user.active,
@@ -51,6 +52,77 @@ module.exports.confirmEmailAddress = function (req, res, next) {
         res.json({ success: true })
       }
     })
+}
+
+/**
+ * ---
+ * $returns:
+ *  description: success true|false
+ *  type: JSON
+ * ---
+ * Validates a user's email in the db.
+ */
+module.exports.resendEmailVerification = function (req, res, next) {
+  User.findOne({ _id: req.user._id }, (err, user) => { // Email already exists
+    if (err) {
+      next(err)
+    } else {
+      // If the emails is in use, direct back to sign in page.
+      if (!user) {
+        res.status(400).json({ success: false, error: { email: { invalid: true } } })
+      } else {
+          if (err) {
+            next(err)
+          } else {
+
+            user.confirmString = crs({ length: 32, type: 'url-safe' })
+
+            user.save((err, user) => {
+              if (err) {
+                next(err)
+              } else {
+                // Send new user 
+                MailController.sendVerifyEmail(user.email, user.confirmString, (err, info) => {
+                  if (err) {
+                    next(err)
+                  } else {
+                    res.json({ success: true })
+                  }
+                })
+              }
+            })
+          }
+      }
+    }
+  })
+}
+
+/**
+ * ---
+ * $returns:
+ *  description: success true|false
+ *  type: JSON
+* ---
+* Returns user details from a confirm token
+*/
+module.exports.getProfileFromConfirmToken = function (req, res, next) {
+  let token = req.params.token
+  User.findOne({ confirmString: token }, (err, user) => { // Email already exists
+    if (err) {
+      next(err)
+    } else {
+      // If the token is invalid no user will be found
+      if (!user) {
+        res.status(400).json({ success: false, error: { token: { invalid: true } } })
+      } else {
+        if (err) {
+          next(err)
+        } else {
+          res.json({ success: true, user: sanitiseUser(user) })
+        }
+      }
+    }
+  })
 }
 
 /**

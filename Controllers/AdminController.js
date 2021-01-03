@@ -69,7 +69,7 @@ module.exports.searchUsers = function (req, res, next) {
 
   // Find all users
   User.find({ $or: [{ displayName: re }, { email: re }], _id: { $ne: req.user._id } })
-    .select('_id displayName email timestamps')
+    .select('_id displayName email emailConfirmed timestamps')
     .exec((err, users) => {
       if (err) {
         next(err)

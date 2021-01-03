@@ -79,8 +79,39 @@ module.exports.sendNewUserEmail = function (email, confString, callback) {
   const options = {
     recipient: email,
     subject: 'Please confirm your email address',
-    template: 'emails/confirmaccount.ejs',
-    renderOptions: { link: `${config.get('host_name')}/account/confirmemail/${confString}` }
+    template: 'emails/newaccount.ejs',
+    renderOptions: { link: `${config.get('host_name')}/account/confirmemail?s=${confString}` }
+  }
+
+  mailer.sendMail(options, (err, info) => {
+    if (callback) {
+      if (err) {
+        callback(err)
+      } else {
+        callback(false, info)
+      }
+    }
+  })
+}
+
+/**
+ * ---
+ * email: The email recipient
+ * confString: The confirm_string associated with a user from the db
+ * $callback:
+ *  description: Called when the mailer is finished
+ *  args:
+ *    err: The error, if there is one
+ *    info: Information on the sent email
+ * ---
+ * Sends an email to a user when they sign up to verify their email
+ */
+module.exports.sendVerifyEmail = function (email, confString, callback) {
+  const options = {
+    recipient: email,
+    subject: 'Please confirm your email address',
+    template: 'emails/verifyemail.ejs',
+    renderOptions: { link: `${config.get('host_name')}/account/confirmemail?s=${confString}` }
   }
 
   mailer.sendMail(options, (err, info) => {

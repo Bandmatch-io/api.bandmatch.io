@@ -11,6 +11,20 @@ module.exports = () => {
 
   router.get('/profile', UserController.getSelfUser)
 
+  /**
+   * ---
+   * $route:
+   *  method: GET
+   *  endpoint: /users/profile/confirm_token/<token>
+   * $returns:
+   *  description: success
+   *  type: JSON
+   * ---
+   * Resends the confirm email message
+   */
+  router.get('/profile/confirm_token/:token', UserController.getProfileFromConfirmToken)
+
+
   router.get('/profile/:id', UserController.getOtherUser)
 
   router.get('/admins/list', UserController.getAdmins)
@@ -74,6 +88,19 @@ module.exports = () => {
   router.patch('/block/:id', function (req, res, next) {
     res.json({ implemented: false })
   })
+
+  /**
+   * ---
+   * $route:
+   *  method: GET
+   *  endpoint: /users/confirm/resend
+   * $returns:
+   *  description: success
+   *  type: JSON
+   * ---
+   * Resends the confirm email messag
+   */
+  router.get('/confirm/resend', UserController.resendEmailVerification)
 
   /**
    * ---
