@@ -100,7 +100,11 @@ module.exports.createUser = function (req, res, next) {
               email: email,
               displayName: name,
               passwordHash: hashedPwd,
-              confirmString: crs({ length: 32, type: 'url-safe' })
+              confirmString: crs({ length: 32, type: 'url-safe' }),
+              timestamps: {
+                signup_at: Date.now(),
+                last_login: Date.now(),
+              }
             })
 
             user.save((err, user) => {
@@ -152,10 +156,16 @@ module.exports.loginUser = function (req, res, next) {
             if (err) {
               return next(err)
             } else {
-              return res.json({ success: true, token: token })
+              user.timestamps.last_login = Date.now()
+              user.save((err, newUser) => {
+                if (err) {
+                  next(err)
+                } else {
+                  return res.json({ success: true, token: token })
+                }
+              }) // save user
             }
-          })
-          // return done(null, user) // needs full user, not just id for serialize/deserialize
+          }) // issue token
         } else {
           return res.status(400).json({ success: false, error: { password: { incorrect: true } } })
         }

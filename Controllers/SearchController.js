@@ -46,7 +46,7 @@ module.exports.search = function (req, res, next) {
         searchType: { $in: types },
         active: true
       })
-        .select('_id displayName searchType fullSearchType genres instruments description')
+        .select('_id displayName searchType fullSearchType genres instruments description timestamps')
         .exec((err, users) => {
           if (err) {
             next(err)

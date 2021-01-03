@@ -26,7 +26,8 @@ const sanitiseUser = function (user) {
     description: user.description,
     searchRadius: user.searchRadius,
     searchLocation: user.searchLocation,
-    searchType: user.searchType
+    searchType: user.searchType,
+    timestamps: user.timestamps
   }
 }
 module.exports.sanitiseUser = sanitiseUser

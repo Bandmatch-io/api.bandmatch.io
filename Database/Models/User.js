@@ -31,6 +31,10 @@ const userSchema = new Schema({
   passReset: {
     token: { type: String, maxlength: 32, required: false },
     timestamp: { type: Date, required: false }
+  },
+  timestamps: {
+    signup_at: { type: Date, required: true },
+    last_login: { type: Date, required: true },
   }
 })
 
