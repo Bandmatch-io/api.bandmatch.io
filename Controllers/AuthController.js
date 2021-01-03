@@ -265,19 +265,26 @@ module.exports.setNewPassword = function (req, res, next) {
     if (err) {
       next(err)
     } else {
-      User.updateOne({ passResetString: passStr },
-        { $set: { passwordHash: hashedPwd, passResetString: '' } })
-        .exec((err, result) => {
-          if (err) {
-            next(err)
-          } else {
-            if (result.nModified === 1) {
-              res.json({ success: true })
+      User.findOne({ 'passReset.token': passStr }, (err, user) => {
+        if (err) {
+          next(err)
+        } else {
+          if (user) {
+            if (user.passReset.timestamp > Date.now()) {
+              user.passwordHash = hashedPwd
+              user.passReset = { token: '', timestamp: undefined }
+
+              user.save((err, user) => {
+                res.json({ success: true })
+              })
             } else {
-              res.json({ success: false, error: { passwordResetStr: { invalid: true } } })
-            }
-          }
-        })
+              res.status(400).json({ success: false, error: { token: { expired: true } } })
+            } /** expired check */
+          } else {
+            res.status(400).json({ success: false, error: { token: { invalid: true } } })
+          } /** user defined heck */
+        }
+      }) /** User.findOne */
     }
-  })
+  }) /** hashPassword */
 }

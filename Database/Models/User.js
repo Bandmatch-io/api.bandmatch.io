@@ -28,7 +28,10 @@ const userSchema = new Schema({
   admin: { type: Boolean, default: false },
   emailConfirmed: { type: Boolean, default: false },
   confirmString: { type: String, maxlength: 32 },
-  passResetString: { type: String, maxlength: 32 }
+  passReset: {
+    token: { type: String, maxlength: 32, required: false },
+    timestamp: { type: Date, required: false }
+  }
 })
 
 userSchema.index({ searchLocation: '2dsphere' })

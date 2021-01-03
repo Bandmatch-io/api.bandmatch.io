@@ -4,6 +4,9 @@ const crs = require('crypto-random-string')
 const MailController = require('./MailController')
 const MessageController = require('./MessageController')
 
+const config = require('config')
+const passCFG = config.get('Password')
+
 /**
  * ---
  * user: The user to sanitise
@@ -63,10 +66,11 @@ module.exports.requestNewPassword = function (req, res, next) {
   if (email === undefined) {
     res.status(400).json({ success: false, error: { email: { absent: true } } })
   }
-
   const str = crs({ length: 32, type: 'url-safe' })
+  let ts = new Date()
+  ts = ts.setTime(Date.now() + passCFG.valid_time)
   User.updateOne({ email: email },
-    { $set: { passResetString: str } })
+    { $set: { passReset: { token: str, timestamp: ts } } })
     .exec((err, result) => {
       if (err) {
         next(err)
@@ -76,7 +80,7 @@ module.exports.requestNewPassword = function (req, res, next) {
             if (err) {
               next(err)
             } else {
-              res.json({ success: true })
+              res.status(200).json({ success: true })
             }
           })
         } else {
