@@ -28,12 +28,12 @@ app.use(helmet())
 const corsOptions = {
   origin:  function(origin, callback){
     // allow requests with no origin 
-    if(!origin) return callback(null, true);
+    if(!origin) return callback(null, true)
     if(config.get('cors_whitelist').indexOf(origin) === -1){
-      var message = 'The CORS policy for this origin doesn\'t allow access from the particular origin.';
-      return callback(new Error(message), false);
+      var message = 'The CORS policy for this origin doesn\'t allow access from the particular origin.'
+      return callback(new Error(message), false)
     }
-    return callback(null, true);
+    return callback(null, true)
   },
   optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
   credentials: true

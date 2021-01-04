@@ -104,7 +104,7 @@ module.exports.sendNewUserEmail = function (email, confString, callback) {
  *    err: The error, if there is one
  *    info: Information on the sent email
  * ---
- * Sends an email to a user when they sign up to verify their email
+ * Sends an email to a user when resend the verify email confirmation
  */
 module.exports.sendVerifyEmail = function (email, confString, callback) {
   const options = {

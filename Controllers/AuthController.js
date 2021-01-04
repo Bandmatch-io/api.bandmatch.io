@@ -8,6 +8,16 @@ const jwt = require('../bin/jwt')
 // Should be in config, but the opportunity has passed.
 const saltRounds = 10
 
+/**
+ * ---
+ * $callback:
+  *  description: Called when the password hash been hashed
+  *  args:
+  *    err: The error returned, or false
+  *    hashed: The hashed password.
+ * ---
+ * Hashes a plaintext password using bcrypt
+ */
 const hashPassword = function (plaintext, done) {
   bcrypt.genSalt(saltRounds, (err, salt) => {
     if (err) {
@@ -131,6 +141,31 @@ module.exports.createUser = function (req, res, next) {
   })
 }
 
+/**
+ * ---
+ * $returns:
+ *  description: success true or false, error and user
+ *  type: JSON
+ * ---
+ * 
+ * response takes this form, but only error or token will be present
+ * ``` javascript
+ * {
+ *    success: true|false,
+ *    error: {
+ *      email: {
+ *        invalid: true,
+ *        missing: true
+ *      },
+ *      password: {
+ *        incorrect: true,
+ *        missing: true
+ *      }
+ *    },
+ *    token: <JWT Token>
+ * }
+ * ```
+ */
 module.exports.loginUser = function (req, res, next) {
   if (req.body.email === undefined) {
     return res.status(400).json({ success: false, error: { email: { missing: true } } })
@@ -173,6 +208,7 @@ module.exports.loginUser = function (req, res, next) {
     })
   })
 }
+
 
 module.exports.removeLogin = function (req, res, next) {
   if (req.user) {

@@ -8,10 +8,10 @@ module.exports = () => {
   /**
    * ---
    * $body:
-   *  target: 'User' or 'Conversation'
-   *  reportedUser: _id
-   *  reportedConversation: _id
-   *  reason: 'Offensive', 'Harrassment', 'Spam', or 'FakeProfile'
+   *  target: User or Conversation
+   *  reportedUser: ObjectId
+   *  reportedConversation: ObjectId
+   *  reason: Offensive, Harrassment, Spam, or FakeProfile
    * $returns:
    *  description: success true or false
    *  type: JSON

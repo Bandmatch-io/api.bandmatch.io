@@ -31,6 +31,14 @@ module.exports.fetchAllConversations = function (req, res, next) {
     })
 }
 
+/**
+ * ---
+ * $returns:
+ *  description: Fetches all the conversations for 
+ *  type: JSON
+ * ---
+ * Fetches the signed in user's conversations, sorted by timestamp
+ */
 module.exports.sendMessage = function (req, res, next) {
   const recipientID = req.body.recipientID
   const messageContent = req.body.messageContent
