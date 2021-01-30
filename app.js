@@ -26,11 +26,11 @@ app.use(compression())
 app.use(helmet())
 
 const corsOptions = {
-  origin:  function(origin, callback){
+  origin: function (origin, callback) {
     // allow requests with no origin 
-    if(!origin) return callback(null, true)
-    if(config.get('cors_whitelist').indexOf(origin) === -1){
-      var message = 'The CORS policy for this origin doesn\'t allow access from the particular origin.'
+    if (!origin) return callback(null, true)
+    if (config.get('cors_whitelist').indexOf(origin) === -1) {
+      const message = 'The CORS policy for this origin doesn\'t allow access from the particular origin.'
       return callback(new Error(message), false)
     }
     return callback(null, true)
@@ -51,7 +51,9 @@ app.use(require('./bin/sessions')((err) => {
 }))
 
 // view engine setup
-app.use(logger('dev'))
+if (process.env.NODE_ENV !== 'testing') {
+  app.use(logger('dev'))
+}
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
 app.use(cookieParser())
@@ -84,6 +86,14 @@ app.all('*', function (req, res, next) {
         req.user = {
           _id: decoded.sub._id
         }
+      }
+    }
+  }
+
+  if (process.env.NODE_ENV === 'testing') {
+    if (req.query.tkn && req.query.eztkn) {
+      req.user = {
+        _id: req.query.tkn
       }
     }
   }
@@ -121,9 +131,10 @@ app.use(function (err, req, res, next) {
 
   // render the error page
   res.status(err.status || 500)
-  
+
   if (req.app.get('env') !== 'production') {
     debug(err)
+    if (req.app.get('env') === 'testing') { console.log(err) }
     res.json({ status: 500, reason: err })
   } else {
     res.json({ status: err.status || 500 })

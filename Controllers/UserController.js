@@ -71,27 +71,26 @@ module.exports.resendEmailVerification = function (req, res, next) {
       if (!user) {
         res.status(400).json({ success: false, error: { email: { invalid: true } } })
       } else {
-          if (err) {
-            next(err)
-          } else {
+        if (err) {
+          next(err)
+        } else {
+          user.confirmString = crs({ length: 32, type: 'url-safe' })
 
-            user.confirmString = crs({ length: 32, type: 'url-safe' })
-
-            user.save((err, user) => {
-              if (err) {
-                next(err)
-              } else {
-                // Send new user 
-                MailController.sendVerifyEmail(user.email, user.confirmString, (err, info) => {
-                  if (err) {
-                    next(err)
-                  } else {
-                    res.json({ success: true })
-                  }
-                })
-              }
-            })
-          }
+          user.save((err, user) => {
+            if (err) {
+              next(err)
+            } else {
+              // Send new user 
+              MailController.sendVerifyEmail(user.email, user.confirmString, (err, info) => {
+                if (err) {
+                  next(err)
+                } else {
+                  res.json({ success: true })
+                }
+              })
+            }
+          })
+        }
       }
     }
   })

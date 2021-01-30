@@ -13,22 +13,22 @@ const config = require('config')
  * ---
  * Sends an email telling a user that they have a new message.
  */
-module.exports.sendNewMessageEmail = function (email, convoID, callback) {
-  const options = {
-    recipient: email,
-    subject: 'New Message!',
-    template: 'emails/newmessage.ejs',
-    renderOptions: { link: `${config.get('host_name')}/conversations` }
-  }
-
-  mailer.sendMail(options, (err, info) => {
-    if (callback) {
-      if (err) {
-        callback(err)
-      } else {
-        callback(false, info)
-      }
+module.exports.sendNewMessageEmail = function (email, convoID) {
+  return new Promise((resolve, reject) => {
+    const options = {
+      recipient: email,
+      subject: 'New Message!',
+      template: 'emails/newmessage.ejs',
+      renderOptions: { link: `${config.get('host_name')}/conversations` }
     }
+
+    mailer.sendMail(options, (err, info) => {
+      if (err) {
+        reject(err)
+      } else {
+        resolve(info)
+      }
+    })
   })
 }
 
@@ -44,22 +44,22 @@ module.exports.sendNewMessageEmail = function (email, convoID, callback) {
  * ---
  * Sends an email to a user with a password reset link
  */
-module.exports.sendRequestPassEmail = function (email, passStr, callback) {
-  const options = {
-    recipient: email,
-    subject: 'Password reset request',
-    template: 'emails/requestPass.ejs',
-    renderOptions: { link: `${config.get('host_name')}/account/newpassword?s=${passStr}` }
-  }
-
-  mailer.sendMail(options, (err, info) => {
-    if (callback) {
-      if (err) {
-        callback(err)
-      } else {
-        callback(false, info)
-      }
+module.exports.sendRequestPassEmail = function (email, passStr) {
+  return new Promise((resolve, reject) => {
+    const options = {
+      recipient: email,
+      subject: 'Password reset request',
+      template: 'emails/requestPass.ejs',
+      renderOptions: { link: `${config.get('host_name')}/account/newpassword?s=${passStr}` }
     }
+
+    mailer.sendMail(options, (err, info) => {
+      if (err) {
+        reject(err)
+      } else {
+        resolve(info)
+      }
+    })
   })
 }
 
@@ -75,22 +75,22 @@ module.exports.sendRequestPassEmail = function (email, passStr, callback) {
  * ---
  * Sends an email to a user when they sign up to verify their email
  */
-module.exports.sendNewUserEmail = function (email, confString, callback) {
-  const options = {
-    recipient: email,
-    subject: 'Please confirm your email address',
-    template: 'emails/newaccount.ejs',
-    renderOptions: { link: `${config.get('host_name')}/account/confirmemail?s=${confString}` }
-  }
-
-  mailer.sendMail(options, (err, info) => {
-    if (callback) {
-      if (err) {
-        callback(err)
-      } else {
-        callback(false, info)
-      }
+module.exports.sendNewUserEmail = function (email, confString) {
+  return new Promise((resolve, reject) => {
+    const options = {
+      recipient: email,
+      subject: 'Please confirm your email address',
+      template: 'emails/newaccount.ejs',
+      renderOptions: { link: `${config.get('host_name')}/account/confirmemail?s=${confString}` }
     }
+
+    mailer.sendMail(options, (err, info) => {
+      if (err) {
+        reject(err)
+      } else {
+        resolve(info)
+      }
+    })
   })
 }
 
@@ -107,20 +107,20 @@ module.exports.sendNewUserEmail = function (email, confString, callback) {
  * Sends an email to a user when resend the verify email confirmation
  */
 module.exports.sendVerifyEmail = function (email, confString, callback) {
-  const options = {
-    recipient: email,
-    subject: 'Please confirm your email address',
-    template: 'emails/verifyemail.ejs',
-    renderOptions: { link: `${config.get('host_name')}/account/confirmemail?s=${confString}` }
-  }
-
-  mailer.sendMail(options, (err, info) => {
-    if (callback) {
-      if (err) {
-        callback(err)
-      } else {
-        callback(false, info)
-      }
+  return new Promise((resolve, reject) => {
+    const options = {
+      recipient: email,
+      subject: 'Please confirm your email address',
+      template: 'emails/verifyemail.ejs',
+      renderOptions: { link: `${config.get('host_name')}/account/confirmemail?s=${confString}` }
     }
+
+    mailer.sendMail(options, (err, info) => {
+      if (err) {
+        reject(err)
+      } else {
+        resolve(false, info)
+      }
+    })
   })
 }

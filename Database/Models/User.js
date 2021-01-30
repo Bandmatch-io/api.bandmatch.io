@@ -51,6 +51,19 @@ userSchema.virtual('fullSearchType').get(function () {
   return dict[this.searchType]
 })
 
+userSchema.statics.testValidate = function (user) {
+  return new Promise((resolve, reject) => {
+    const userObj = new this(user)
+
+    userObj.validate((err) => {
+      if (err) return reject(err)
+
+      resolve(userObj)
+    })
+  })
+}
+
+
 userSchema.pre('save', function (next) {
   if (this.isNew) { // make sure is new user, and not modifiy old one
     StatController.incrementStat('signups')

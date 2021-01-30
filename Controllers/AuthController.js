@@ -8,329 +8,230 @@ const jwt = require('../bin/jwt')
 // Should be in config, but the opportunity has passed.
 const saltRounds = 10
 
-/**
- * ---
- * $callback:
-  *  description: Called when the password hash been hashed
-  *  args:
-  *    err: The error returned, or false
-  *    hashed: The hashed password.
- * ---
- * Hashes a plaintext password using bcrypt
- */
-const hashPassword = function (plaintext, done) {
-  bcrypt.genSalt(saltRounds, (err, salt) => {
-    if (err) {
-      done(err)
-    } else {
-      bcrypt.hash(plaintext, salt, (err, hashed) => {
-        if (err) {
-          done(err, null)
-        } else {
-          done(false, hashed)
-        }
+module.exports = {
+  util: {
+    findOneUser: (query, opts) => {
+      return new Promise((resolve, reject) => {
+        User.findOne(query)
+          .populate(opts.populate || '')
+          .exec((err, user) => {
+            if (err) {
+              reject(err)
+            } else {
+              resolve(user)
+            }
+          })
       })
-    }
-  })
-}
-module.exports.hashPassword = hashPassword
-
-/**
- * ---
- * $returns:
- *  description: success true or false, error and user
- *  type: JSON
- * ---
- * Creates a user in the database.
- * emails will be turned lowercase.
- * response takes the form, but only error or user will be present
- * ``` javascript
- * {
- *    success: true|false,
- *    error: {
- *      email: {
- *        invalid: true,
- *        inUse: true
- *      },
- *      consent: {
- *        missing: true
- *      },
- *      password: {
- *        invalid: true,
- *        mismatchL true
- *      }
- *    },
- *    user: [User object]
- * }
- * ```
- */
-module.exports.createUser = function (req, res, next) {
-  const email = req.body.email.toLowerCase()
-  const name = req.body.name
-  const pwd = req.body.password
-  const confPwd = req.body.confirmPassword
-  const agreement = req.body.agreement
-
-  if (!agreement) {
-    return res.status(400).json({ success: false, error: { consent: { missing: true } } })
-  }
-
-  // Validate fields
-  if (email.length > 254) {
-    return res.status(400).json({ success: false, error: { email: { invalid: true } } })
-  }
-
-  if (name.length > 16) {
-    return res.status(400).json({ success: false, error: { name: { invalid: true } } })
-  }
-
-  if (pwd !== confPwd) {
-    return res.status(400).json({ success: false, error: { password: { mismatch: true } } })
-  }
-  if (pwd.length < 8) {
-    return res.status(400).json({ success: false, error: { password: { invalid: true } } })
-  }
-
-  // Check the email isn't already in use.
-  User.findOne({ email: email }, (err, user) => { // Email already exists
-    if (err) {
-      next(err)
-    } else {
-      // If the emails is in use, direct back to sign in page.
-      if (user !== null) {
-        res.status(400).json({ success: false, error: { email: { inUse: true } } })
-      } else {
-        // salt and hash password
-        hashPassword(pwd, (err, hashedPwd) => {
+    },
+    saveUser: (newUser) => {
+      return new Promise((resolve, reject) => {
+        User.findOneAndUpdate({ _id: newUser._id }, newUser, { upsert: true })
+          .exec((err, res) => {
+            if (err) {
+              reject(err)
+            } else {
+              resolve(newUser)
+            }
+          })
+      })
+    },
+    hashPassword: (plaintext) => {
+      return new Promise((resolve, reject) => {
+        bcrypt.genSalt(saltRounds, (err, salt) => {
           if (err) {
-            next(err)
+            reject(err)
           } else {
-            // everything validated and secure, save user.
-            const user = new User({
-              email: email,
-              displayName: name,
-              passwordHash: hashedPwd,
-              confirmString: crs({ length: 32, type: 'url-safe' }),
-              timestamps: {
-                signup_at: Date.now(),
-                last_login: Date.now(),
-              }
-            })
-
-            user.save((err, user) => {
+            bcrypt.hash(plaintext, salt, (err, hashed) => {
               if (err) {
-                next(err)
+                reject(err)
               } else {
-                // Send new user email, don't care if it errs
-                MailController.sendNewUserEmail(user.email, user.confirmString, () => {
-                  // After saving the user, issue a new jwt token for them
-                  jwt.issueToken({ _id: user._id }, (err, token) => {
-                    if (err) {
-                      return next(err)
-                    } else {
-                      return res.json({ success: true, token: token })
-                    }
-                  })
-                })
+                resolve(hashed)
               }
             })
           }
         })
-      }
-    }
-  })
-}
-
-/**
- * ---
- * $returns:
- *  description: success true or false, error and user
- *  type: JSON
- * ---
- * 
- * response takes this form, but only error or token will be present
- * ``` javascript
- * {
- *    success: true|false,
- *    error: {
- *      email: {
- *        invalid: true,
- *        missing: true
- *      },
- *      password: {
- *        incorrect: true,
- *        missing: true
- *      }
- *    },
- *    token: <JWT Token>
- * }
- * ```
- */
-module.exports.loginUser = function (req, res, next) {
-  if (req.body.email === undefined) {
-    return res.status(400).json({ success: false, error: { email: { missing: true } } })
-  }
-  if (req.body.password === undefined) {
-    return res.status(400).json({ success: false, error: { password: { missing: true } } })
-  }
-  const email = req.body.email.toLowerCase()
-  const password = req.body.password
-  User.findOne({ email: email }, function (err, user) {
-    if (err) {
-      return next(err)
-    }
-    if (!user) {
-      return res.status(400).json({ success: false, error: { email: { invalid: true } } })
-    }
-    bcrypt.compare(password, user.passwordHash, (err, result) => {
-      if (err) {
-        return next(err)
-      } else {
-        if (result === true) {
-          jwt.issueToken({ _id: user._id }, (err, token) => {
-            if (err) {
-              return next(err)
-            } else {
-              user.timestamps.last_login = Date.now()
-              user.save((err, newUser) => {
-                if (err) {
-                  next(err)
-                } else {
-                  return res.json({ success: true, token: token })
-                }
-              }) // save user
-            }
-          }) // issue token
-        } else {
-          return res.status(400).json({ success: false, error: { password: { incorrect: true } } })
-        }
-      }
-    })
-  })
-}
-
-
-module.exports.removeLogin = function (req, res, next) {
-  if (req.user) {
-    req.user = undefined
-    res.json({ success: true })
-  } else {
-    res.status(401).json({ success: false })
-  }
-}
-
-/**
- * ---
- * $returns:
- *  description: success and/or error
- *  type: JSON
- * ---
- * Updates a password in the database. Used for changing a user's existing password.
- * - If data supplied is invalid, it will return no success and an error
- * - If data is valid it will return success
- */
-module.exports.updatePassword = function (req, res, next) {
-  const oldPwd = req.body.oldPassword
-  const newPwd = req.body.newPassword
-  const confPwd = req.body.confirmPassword
-
-  if (newPwd !== confPwd) {
-    return res.status(400).json({ success: false, error: { password: { mismatch: true } } })
-  }
-  if (newPwd.length < 8) {
-    return res.status(400).json({ success: false, error: { password: { invalid: true } } })
-  }
-
-  User.findById(req.user._id, (err, user) => { // find user
-    if (err) {
-      next(err)
-    } else {
-      // compare old and new
-      bcrypt.compare(oldPwd, user.passwordHash, (err, result) => {
-        if (err) {
-          return next(err)
-        } else {
-          if (result === true) {
-            hashPassword(newPwd, (err, hashedPwd) => {
-              if (err) {
-                next(err)
-              } else {
-                User.updateOne({ _id: req.user._id },
-                  { $set: { passwordHash: hashedPwd } })
-                  .exec((err, result) => {
-                    if (err) {
-                      next(err)
-                    } else {
-                      if (result.nModified === 1) {
-                        return res.json({ success: true })
-                      } else {
-                        return res.status(401).json({ success: true, error: { login: { absent: true } } })
-                      }
-                    }
-                  }) // user.updateOne
-              }
-            }) // hashPassword
-          } else { // result = false
-            return res.status(400).json({ success: false, error: { password: { incorrect: true } } })
-          }
-        }
-      }) // bcrypt
-    }
-  }) // user
-}
-
-/**
- * ---
- * $returns:
- *  description: success and/or error
- *  type: JSON
- * ---
- * Updates a password in the database. Used for changing a user's forgotten password.
- * - If data supplied is invalid, it will render the change password page
- * - If data is valid it will redirect to /
- */
-module.exports.setNewPassword = function (req, res, next) {
-  // const userId = req.body.userId
-  const passStr = req.params.passStr
-  const newPwd = req.body.password
-  const confPwd = req.body.confirmPassword
-
-  // if (!mongoose.Types.ObjectId.isValid(userId)) {
-  //   return res.status(400).json({ success: false, error: { userId: { invalid: true } } })
-  // }
-
-  if (newPwd !== confPwd) {
-    return res.status(400).json({ success: false, error: { password: { mismatch: true } } })
-  }
-  if (newPwd.length < 8) {
-    return res.status(400).json({ success: false, error: { password: { invalid: true } } })
-  }
-
-  // salt and hash password
-  hashPassword(newPwd, (err, hashedPwd) => {
-    if (err) {
-      next(err)
-    } else {
-      User.findOne({ 'passReset.token': passStr }, (err, user) => {
-        if (err) {
-          next(err)
-        } else {
-          if (user) {
-            if (user.passReset.timestamp > Date.now()) {
-              user.passwordHash = hashedPwd
-              user.passReset = { token: '', timestamp: undefined }
-
-              user.save((err, user) => {
-                res.json({ success: true })
-              })
-            } else {
-              res.status(400).json({ success: false, error: { token: { expired: true } } })
-            } /** expired check */
+      })
+    },
+    comparePassword: (plaintext, hash) => {
+      return new Promise((resolve, reject) => {
+        bcrypt.compare(plaintext, hash, (err, result) => {
+          if (err) {
+            reject(err)
           } else {
-            res.status(400).json({ success: false, error: { token: { invalid: true } } })
-          } /** user defined heck */
-        }
-      }) /** User.findOne */
-    }
-  }) /** hashPassword */
+            resolve(result)
+          }
+        })
+      })
+    },
+    rightNow: Date.now,
+    encodeToken: jwt.issueToken,
+    sendEmail: MailController.sendNewUserEmail
+  },
+  /**
+   * Creates a user object in the database
+   * @param {string} email The email of the user
+   * @param {string} name The name of the user
+   * @param {string} password The password to hash and store
+   * @returns A Promise resolving with { ok, token?, error? }
+   */
+  CreateUser: (email, name, password) => {
+    return new Promise((resolve, reject) => {
+      email = email.toLowerCase()
+      module.exports.util.findOneUser({ email: email })
+        .then((user) => {
+          if (user !== null && user !== undefined) {
+            resolve({ ok: false, error: { user: { exists: true } } })
+          }
+
+          module.exports.util.hashPassword(password)
+            .then((hashedPassword) => {
+              // everything validated and secure, save user.
+              const user = new User({
+                email: email,
+                displayName: name,
+                passwordHash: hashedPassword,
+                confirmString: crs({ length: 32, type: 'url-safe' }),
+                timestamps: {
+                  signup_at: module.exports.util.rightNow(),
+                  last_login: module.exports.util.rightNow()
+                }
+              })
+
+              User.testValidate(user)
+                .then((validUser) => {
+                  module.exports.util.saveUser(validUser)
+                    .then(async (user) => {
+                      // Send new user email, don't care if it errs
+                      await module.exports.util.sendEmail(user.email, user.confirmString)
+                        .catch(err => reject(new Error(`Error sending email: ${err}`)))
+                      // After saving the user, issue a new jwt token for them
+                      const token = await module.exports.util.encodeToken({ _id: user._id })
+                        .catch(err => reject(new Error(`Error issuing jwt: ${err}`)))
+                      resolve({ ok: true, token })
+                    })
+                    .catch((err) => {
+                      reject(new Error(`Error saving user: ${err}`))
+                    })
+                })
+            })
+            .catch((err) => {
+              reject(new Error(`Error hashing password: ${err}`))
+            })
+        })
+        .catch((err) => {
+          reject(new Error(`Error finding user with email[${email}]: ${err}`))
+        })
+    })
+  },
+  /**
+   * Checks login details against the database
+   * @param {string} email- The email of the user
+   * @param {string} password - The password of the user
+   * @returns A Promise resolving with { ok, token?, error? }
+   */
+  CheckUserLogin: (email, password) => {
+    return new Promise((resolve, reject) => {
+      module.exports.util.findOneUser({ email: email }, {})
+        .then((user) => {
+          if (user === null || user === undefined) {
+            resolve({ ok: false, error: { email: { invalid: true } } })
+            return
+          }
+          module.exports.util.comparePassword(password, user.passwordHash)
+            .then((result) => {
+              if (result === true) {
+                module.exports.util.encodeToken({ _id: user._id })
+                  .then((token) => {
+                    user.timestamps.last_login = module.exports.util.rightNow()
+                    module.exports.util.saveUser(user)
+                      .then((user) => {
+                        resolve({ ok: true, token })
+                      })
+                      .catch((err) => {
+                        reject(new Error(`Error updating user: ${err}`))
+                      })
+                  })
+                  .catch((err) => {
+                    reject(new Error(`COuldn't issue jwt: ${err}`))
+                  })
+              } else {
+                resolve({ ok: false, error: { password: { incorrect: true } } })
+              }
+            })
+            .catch((err) => {
+              reject(new Error(`Couldn't compare passwords: ${err}`))
+            })
+        })
+        .catch((err) => {
+          reject(new Error(`Error finding user with email[${email}]: ${err}`))
+        })
+    })
+  },
+  /**
+   * Updates a user's password, so long as oldPassword is equal to the one stored in the db
+   * @param {*} userID - The _id of the user
+   * @param {*} oldPassword - The old password of the user, to check equivalence
+   * @param {*} newPassword - The new password of the user, to be hashed
+   * @returns A Promise resolving with { ok, doc?, error? }
+   */
+  UpdateUserPassword: (userID, oldPassword, newPassword) => {
+    return new Promise((resolve, reject) => {
+      module.exports.util.findOneUser({ _id: userID }, {})
+        .then((user) => {
+          if (user === null || user === undefined) {
+            resolve({ ok: false, error: { login: { absent: true } } })
+            return
+          }
+          module.exports.util.comparePassword(oldPassword, user.passwordHash)
+            .then((result) => {
+              if (result === true) {
+                module.exports.util.hashPassword(newPassword)
+                  .then((hashed) => {
+                    user.passwordHash = hashed
+                    module.exports.util.saveUser(user)
+                      .then((user) => {
+                        resolve({ ok: true, doc: user })
+                      })
+                      .catch(err => reject(new Error(`Error updating user: ${err}`)))
+                  })
+                  .catch(err => reject(new Error(`Error hashing password: ${err}`)))
+              } else {
+                resolve({ ok: false, error: { password: { incorrect: true } } })
+              }
+            })
+            .catch(err => reject(new Error(`Error comparing passwords: ${err}`)))
+        })
+        .catch(err => reject(new Error(`Error finding user with id[${userID}]: ${err}`)))
+    })
+  },
+  /**
+   * Sets a user's password to a new token, so long as passResetToken is valid
+   * @param {String} passResetToken - The token to check against the db
+   * @param {String} newPassword - The new password to hash and store
+   * @returns A Promise resolving with { ok, doc?, token? }
+   */
+  SetNewUserPassword: (passResetToken, newPassword) => {
+    return new Promise((resolve, reject) => {
+      module.exports.util.findOneUser({ 'passReset.token': passResetToken }, {})
+        .then((user) => {
+          if (user === null || user === undefined) {
+            resolve({ ok: false, error: { token: { invalid: true } } })
+            return
+          } else if (user.passReset.timestamp < module.exports.util.rightNow()) {
+            resolve({ ok: false, error: { token: { expired: true } } })
+            return
+          }
+          module.exports.util.hashPassword(newPassword)
+            .then((hashed) => {
+              user.passwordHash = hashed
+              user.passReset = { token: '', timestamp: undefined }
+              module.exports.util.saveUser(user)
+                .then(newUser => resolve({ ok: true, doc: newUser }))
+                .catch(err => reject(new Error(`Error updating user: ${err}`)))
+            })
+            .catch(err => reject(new Error(`Error hashing password: ${err}`)))
+        })
+        .catch(err => reject(new Error(`Error finding user with PRToken[${passResetToken}]: ${err}`)))
+    })
+  }
 }

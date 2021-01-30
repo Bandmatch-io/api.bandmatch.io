@@ -26,7 +26,7 @@ module.exports = (opts) => {
               pass: account.pass // generated ethereal password
             }
           })
-  
+
           transporter.use('compile', htmlToText())
         }
       })
@@ -42,7 +42,7 @@ module.exports = (opts) => {
         },
         socketTimeout: mailCFG.inactivityLengthMinutes * 60 * 1000
       })
-  
+
       transporter.verify((err, success) => {
         if (err) {
           debug(err)
