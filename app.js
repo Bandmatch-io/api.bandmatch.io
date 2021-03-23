@@ -134,8 +134,8 @@ app.use(function (err, req, res, next) {
 
   if (req.app.get('env') !== 'production') {
     debug(err)
-    if (req.app.get('env') === 'testing') { console.log(err) }
-    res.json({ status: 500, reason: err })
+    // if (req.app.get('env') === 'testing') { console.log(err) }
+    res.json({ status: err.status, reason: err })
   } else {
     res.json({ status: err.status || 500 })
   }

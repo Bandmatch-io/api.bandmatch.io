@@ -34,9 +34,6 @@ module.exports = () => {
     const newPwd = req.body.password
     const confPwd = req.body.confirmPassword
 
-    // if (!mongoose.Types.ObjectId.isValid(userId)) {
-    //   return res.status(400).json({ success: false, error: { userId: { invalid: true } } })
-    // }
     if (!newPwd) {
       return res.status(400).json({ success: false, error: { password: { missing: true } } })
     }

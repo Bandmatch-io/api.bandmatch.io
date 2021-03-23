@@ -8,11 +8,8 @@ const config = require('config')
 const passCFG = config.get('Password')
 
 /**
- * ---
- * user: The user to sanitise
- * $returns: The sanitised user
- * ---
- * Sanitises a user object.
+ * @param {Object} user The user object from the DB
+ * @returns the user object with some fields omitted for safe return to enduser
  */
 const sanitiseUser = function (user) {
   return {
@@ -31,312 +28,310 @@ const sanitiseUser = function (user) {
     timestamps: user.timestamps
   }
 }
-module.exports.sanitiseUser = sanitiseUser
 
-/**
- * ---
- * $returns:
- *  description: success true|false
- *  type: JSON
- * ---
- * Validates a user's email in the db.
- */
-module.exports.confirmEmailAddress = function (req, res, next) {
-  // sets the email address to confirmed if correct string is provded for logged in user
-  User.updateOne({ confirmString: req.params.str, _id: req.user._id },
-    { $set: { emailConfirmed: true, confirmString: '' } })
-    .exec((err, user) => {
-      if (err) {
-        next(err)
-      } else {
-        res.json({ success: true })
-      }
-    })
-}
-
-/**
- * ---
- * $returns:
- *  description: success true|false
- *  type: JSON
- * ---
- * Validates a user's email in the db.
- */
-module.exports.resendEmailVerification = function (req, res, next) {
-  User.findOne({ _id: req.user._id }, (err, user) => { // Email already exists
-    if (err) {
-      next(err)
-    } else {
-      // If the emails is in use, direct back to sign in page.
-      if (!user) {
-        res.status(400).json({ success: false, error: { email: { invalid: true } } })
-      } else {
-        if (err) {
-          next(err)
-        } else {
-          user.confirmString = crs({ length: 32, type: 'url-safe' })
-
-          user.save((err, user) => {
+module.exports = {
+  util: {
+    sanitiseUser: sanitiseUser,
+    deleteOneUser: (id) => {
+      return new Promise((resolve, reject) => {
+        User.findById(id)
+          .deleteOne()
+          .exec((err, user) => {
             if (err) {
-              next(err)
+              reject(err)
             } else {
-              // Send new user 
-              MailController.sendVerifyEmail(user.email, user.confirmString, (err, info) => {
-                if (err) {
-                  next(err)
-                } else {
-                  res.json({ success: true })
-                }
-              })
+              resolve({ ok: true })
             }
           })
-        }
-      }
-    }
-  })
-}
-
-/**
- * ---
- * $returns:
- *  description: success true|false
- *  type: JSON
-* ---
-* Returns user details from a confirm token
-*/
-module.exports.getProfileFromConfirmToken = function (req, res, next) {
-  let token = req.params.token
-  User.findOne({ confirmString: token }, (err, user) => { // Email already exists
-    if (err) {
-      next(err)
-    } else {
-      // If the token is invalid no user will be found
-      if (!user) {
-        res.status(400).json({ success: false, error: { token: { invalid: true } } })
-      } else {
-        if (err) {
-          next(err)
-        } else {
-          res.json({ success: true, user: sanitiseUser(user) })
-        }
-      }
-    }
-  })
-}
-
-/**
- * ---
- * $returns:
- *  description: success
- *  type: JSON
- * ---
- * Adds a passResetString to the logged in user, then sends an email to the user.
- */
-module.exports.requestNewPassword = function (req, res, next) {
-  const email = req.body.email
-
-  if (email === undefined) {
-    res.status(400).json({ success: false, error: { email: { absent: true } } })
-  }
-  const str = crs({ length: 32, type: 'url-safe' })
-  let ts = new Date()
-  ts = ts.setTime(Date.now() + passCFG.valid_time)
-  User.updateOne({ email: email },
-    { $set: { passReset: { token: str, timestamp: ts } } })
-    .exec((err, result) => {
-      if (err) {
-        next(err)
-      } else {
-        if (result.n === 1) {
-          MailController.sendRequestPassEmail(email, str, (err, info) => {
+      })
+    },
+    findOneUser: (query, opts) => {
+      return new Promise((resolve, reject) => {
+        User.findOne(query)
+          .populate(opts.populate || '')
+          .exec((err, user) => {
             if (err) {
-              next(err)
+              reject(err)
             } else {
-              res.status(200).json({ success: true })
+              resolve(user)
             }
           })
-        } else {
-          res.status(400).json({ success: false, error: { email: { invalid: true } } })
-        }
-      }
-    })
-}
-
-/**
- * ---
- * $returns:
- *  description: A user profile
- *  type: JSON
- * ---
- * returns a user's profile
- */
-module.exports.getOtherUser = function (req, res, next) {
-  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-    return next()
-  }
-
-  User.findById(req.params.id)
-    .select('-passwordHash -confirmString ')
-    .exec((err, user) => {
-      if (err) {
-        next(err)
-      } else {
-        if (!user) {
-          next() // direct to 404
-        } else {
-          res.json({ success: true, user: sanitiseUser(user) })
-        }
-      }
-    })
-}
-
-/**
- * ---
- * $returns:
- *  description: The user data with the id from the jwt
- *  type: JSON
- * ---
- */
-module.exports.getSelfUser = function (req, res, next) {
-  if (!mongoose.Types.ObjectId.isValid(req.user._id)) {
-    return next()
-  }
-
-  User.findById(req.user._id)
-    .select('-passwordHash -confirmString')
-    .exec((err, user) => {
-      if (err) {
-        return next(err)
-      } else {
-        if (!user) {
-          next() // direct to 404
-        } else {
-          return res.json({ success: true, user: sanitiseUser(user) })
-        }
-      }
-    })
-}
-
-/**
- * ---
- * $returns:
- *  description: success, error and user
- *  type: JSON
- * ---
- * Updates the logged in user's data
- */
-module.exports.updateSelfUser = function (req, res, next) {
-  // sanity check, should not be accessible if not logged in but check anyway.
-  if (req.user === undefined) {
-    return res.status(401).json({ success: false, error: { login: { absent: true } } })
-  }
-  User.findById(req.user._id, (err, user) => {
-    if (err) {
-      next(err)
-    } else {
-      if (!user) {
-        res.status(401).json({ success: false, error: { login: { invalid: true } } })
-      } else {
-        if (req.body.displayName) {
-          if (req.body.displayName.length > 16) {
-            return res.status(400).json({ success: false, error: { displayName: { invalid: true } } })
+      })
+    },
+    findSomeUsers: (query, opts) => {
+      return new Promise((resolve, reject) => {
+        User.find(query)
+          .populate(opts.populate || '')
+          .select(opts.select || '')
+          .exec((err, users) => {
+            if (err) {
+              reject(err)
+            } else {
+              resolve(users)
+            }
+          })
+      })
+    },
+    saveUser: (newUser) => {
+      return new Promise((resolve, reject) => {
+        User.findOneAndUpdate({ _id: newUser._id }, newUser, { upsert: true })
+          .exec((err, res) => {
+            if (err) {
+              reject(err)
+            } else {
+              resolve(newUser)
+            }
+          })
+      })
+    },
+    combineUser: (old, newObj) => {
+      return new Promise((resolve, reject) => {
+        if (newObj.displayName) {
+          if (newObj.displayName.length > 16) {
+            resolve({ ok: false, error: { displayName: { invalid: true } } })
+            return
           }
-          user.displayName = req.body.displayName
+          old.displayName = newObj.displayName
         }
 
         // function to clean genre and instruments
         const cleanStr = (str) => { return str.toLowerCase().replace(/[^a-zA-Z\s]+/g, '') }
 
-        if (req.body.genres) {
-          user.genres = req.body.genres.map(cleanStr)
+        if (newObj.genres) {
+          old.genres = newObj.genres.map(cleanStr)
         }
 
-        if (req.body.instruments) {
-          user.instruments = req.body.instruments.map(cleanStr)
+        if (newObj.instruments) {
+          old.instruments = newObj.instruments.map(cleanStr)
         }
 
-        if (req.body.searchType) {
-          if (req.body.searchType === 'Form' || req.body.searchType === 'Join' ||
-            req.body.searchType === 'Either' || req.body.searchType === 'Recruit') {
-            user.searchType = req.body.searchType
+        if (newObj.searchType) {
+          if (newObj.searchType === 'Form' || newObj.searchType === 'Join' ||
+              newObj.searchType === 'Either' || newObj.searchType === 'Recruit') {
+            old.searchType = newObj.searchType
           } else {
-            return res.status(400).json({ success: false, error: { searchType: { invalid: true } } })
+            resolve({ ok: false, error: { searchType: { invalid: true } } })
+            return
           }
         }
 
-        if (req.body.description) {
-          if (req.body.description.length > 512) {
-            return res.status(400).json({ success: false, error: { description: { invalid: true } } })
+        if (newObj.description) {
+          if (newObj.description.length > 512) {
+            resolve({ ok: false, error: { description: { invalid: true } } })
+            return
           }
-          user.description = req.body.description.trim()
+          old.description = newObj.description.trim()
         }
 
-        if (req.body.searchRadius) {
-          if (req.body.searchRadius < 0) {
-            return res.status(400).json({ success: false, error: { searchRadius: { negative: true } } })
+        if (newObj.searchRadius) {
+          if (newObj.searchRadius < 0) {
+            resolve({ ok: false, error: { searchRadius: { negative: true } } })
+            return
           }
-          user.searchRadius = req.body.searchRadius
+          old.searchRadius = newObj.searchRadius
         }
 
-        if (req.body.searchLocation.coordinates) {
-          user.searchLocation.coordinates = req.body.searchLocation.coordinates
+        if (newObj.searchLocation && newObj.searchLocation.coordinates) {
+          if (!old.searchLocation) {
+            old.searchLocation = {}
+          }
+          old.searchLocation.coordinates = newObj.searchLocation.coordinates
         }
 
-        if (req.body.active) {
-          user.active = req.body.active
+        if (newObj.active) {
+          old.active = newObj.active
         }
-
-        user.save((err, user) => {
-          if (err) {
-            next(err)
+        resolve({ ok: true, doc: old })
+      })
+    },
+    sendReqPassEmail: MailController.sendRequestPassEmail,
+    sendConfEmail: MailController.sendVerifyEmail,
+    deleteConvosForUser: MessageController.deleteConvosForUser,
+    rightNow: Date.now
+  },
+  /**
+   * Verifies the owner of an email.
+   * @param {String} confString - The email confirm token
+   * @param {String} userID - The id of the user to validate
+   * @returns A Promise resolving with { ok, doc?, error? }
+   */
+  ConfirmEmailAddress: (confString, userID) => {
+    return new Promise((resolve, reject) => {
+      module.exports.util.findOneUser({ confirmString: confString, _id: userID }, {})
+        .then((user) => {
+          if (user === null || user === undefined) {
+            resolve({ ok: false, error: { user: { notfound: true } } })
+            return
+          }
+          user.emailConfirmed = true
+          user.confirmString = ''
+          module.exports.util.saveUser(user)
+            .then((doc) => {
+              resolve({ ok: true, doc })
+            })
+            .catch(err => reject(new Error(`Could not save user: ${err}`)))
+        })
+        .catch(err => reject(new Error(`Could not find user with confirmString[${confString}] and id[${userID}]: ${err}`)))
+    })
+  },
+  /**
+   * Sends a confirmation email to the user with userID
+   * @param {String} userID - The ID of the user to send to
+   * @returns A Promise resolving with { ok, error? }
+   */
+  ResendEmailVerification: (userID) => {
+    return new Promise((resolve, reject) => {
+      module.exports.util.findOneUser({ _id: userID }, {})
+        .then((user) => {
+          if (!user) {
+            resolve({ ok: false, error: { email: { invalid: true } } })
           } else {
-            res.json({ success: true, user: sanitiseUser(user) })
+            user.confirmString = crs({ length: 32, type: 'url-safe' })
+
+            module.exports.util.saveUser(user)
+              .then((user) => {
+                // Send new user
+                module.exports.util.sendConfEmail(user.email, user.confirmString)
+                  .then((info) => {
+                    resolve({ ok: true })
+                  })
+                  .catch(err => reject(new Error(`Could not send email to address[${user.email}]: ${err}`)))
+              })
+              .catch(err => reject(new Error(`Could not save user with id[${user._id}]: ${err}`)))
           }
         })
-      }
-    }
-  })
-}
+        .catch(err => reject(new Error(`Could not find user with id[${userID}]: ${err}`)))
+    })
+  },
+  /**
+   * Fetches A user from their confirm token
+   * @param {String} token - The confirm token to search for
+   * @returns Promise resolving with { ok, doc?, error?}
+   */
+  GetProfileFromConfirmToken: (token) => {
+    return new Promise((resolve, reject) => {
+      module.exports.util.findOneUser({ confirmString: token }, {})
+        .then((user) => {
+          if (!user) {
+            return resolve({ ok: false, error: { token: { invalid: true } } })
+          }
+          resolve({ ok: true, doc: module.exports.util.sanitiseUser(user) })
+        })
+        .catch(err => reject(new Error(`Could not find user with token[${token}]: ${err}`)))
+    })
+  },
+  /**
+   * Adds a passResetString to the user and, then sends an email
+   * @param {String} email - The email of the user
+   */
+  RequestNewPassword: (email) => {
+    return new Promise((resolve, reject) => {
+      module.exports.util.findOneUser({ email: email }, {})
+        .then((user) => {
+          if (!user) {
+            resolve({ ok: false, error: { email: { invalid: true } } })
+            return
+          }
 
-/**
- * ---
- * $returns:
- *  description: success
- *  type: JSON
- * ---
- * Deletes a user from the website
- */
-module.exports.deleteUser = function (req, res, next) {
-  if (!mongoose.Types.ObjectId.isValid(req.user._id)) {
-    return next()
+          const str = crs({ length: 32, type: 'url-safe' })
+          let ts = new Date()
+          ts = ts.setTime(module.exports.util.rightNow() + passCFG.valid_time)
+          user.passReset = {
+            token: str,
+            timestamp: ts
+          }
+          module.exports.util.saveUser(user)
+            .then((user) => {
+              module.exports.util.sendReqPassEmail(email, str)
+                .then((info) => {
+                  resolve({ ok: true })
+                })
+                .catch(err => reject(new Error(`Could not send email to address[${email}]: ${err}`)))
+            })
+            .catch(err => reject(new Error(`Could not save user with id[${user._id}]: ${err}`)))
+        })
+        .catch((err) => {
+          reject(new Error(`Could not find user with email[${email}]: ${err}`))
+        })
+    })
+  },
+  /**
+   * @param {String} id - The id of the user to get
+   * @returns A Promise resolving with { ok, doc?, error? }
+   */
+  GetUser: (id) => {
+    return new Promise((resolve, reject) => {
+      module.exports.util.findOneUser({ _id: id }, {})
+        .then((user) => {
+          if (!user) {
+            resolve({ ok: false, error: { user: { notfound: true } } })
+            return
+          }
+          resolve({ ok: true, doc: module.exports.util.sanitiseUser(user) })
+        })
+        .catch(err => reject(new Error(`Could not find user with id[${id}]: ${err}`)))
+    })
+  },
+  /**
+   * Returns a list of users registered as admin
+   * @returns A Promise resolving with { ok, docs }
+   */
+  GetAdmins: () => {
+    return new Promise((resolve, reject) => {
+      module.exports.util.findSomeUsers({ admin: true }, { select: '_id, displayName' })
+        .then((users) => {
+          resolve({ ok: true, docs: users })
+        })
+        .catch(err => reject(new Error(`Could not find users: ${err}`)))
+    })
+  },
+  /**
+   * Updates a user doc in the db.
+   * @returns A promise resolving with { ok, doc? error? }
+   */
+  UpdateSelfUser: (userID, newUserObj) => {
+    return new Promise((resolve, reject) => {
+      module.exports.util.findOneUser({ _id: userID })
+        .then((user) => {
+          if (!user || user === undefined || user === null) {
+            resolve({ ok: false, error: { login: { invalid: true } } })
+          } else {
+            module.exports.util.combineUser(user, newUserObj)
+              .then((resp) => {
+                if (resp.ok) {
+                  const newUser = resp.doc
+                  newUser._id = userID
+                  module.exports.util.saveUser(newUser)
+                    .then((savedUser) => {
+                      resolve({ ok: true, doc: module.exports.util.sanitiseUser(savedUser) })
+                    })
+                    .catch(err => reject(new Error(`Could not save user with id[${userID}]: ${err}`)))
+                } else {
+                  resolve(resp)
+                }
+              })
+          }
+        })
+        .catch(err => reject(new Error(`Could not find user with id[${userID}]: ${err}`)))
+    })
+  },
+  /**
+   * Deletes a user from the db
+   * @returns A promise resolving with { ok }
+   */
+  DeleteUser: (userID) => {
+    return new Promise((resolve, reject) => {
+      module.exports.util.deleteOneUser(userID)
+        .then((result) => {
+          module.exports.util.deleteConvosForUser(userID, (err) => {
+            if (err) {
+              reject(new Error(`Could not delete conversations for user with id[${userID}]: ${err}`))
+            } else {
+              resolve({ ok: true })
+            }
+          })
+        })
+        .catch(err => reject(new Error(`Could not find and delete user with id[${userID}]: ${err}`)))
+    })
   }
-
-  const id = req.user._id
-  User.findById(id)
-    .deleteOne()
-    .exec((err, user) => {
-      if (err) {
-        next(err)
-      } else {
-        MessageController.deleteConvosForUser(id, (err) => {
-          if (err) {
-            next(err)
-          } else {
-            res.json({ success: true })
-          }
-        })
-      }
-    })
-}
-
-module.exports.getAdmins = function (req, res, next) {
-  User.find({ admin: true })
-    .select('_id, displayName')
-    .exec((err, users) => {
-      if (err) {
-        next(err)
-      } else {
-        res.json({ success: true, users: users })
-      }
-    })
 }

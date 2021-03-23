@@ -12,9 +12,9 @@ const app = require('../../app')
 const AuthController = require('../../Controllers/AuthController')
 
 const rn = Date.UTC(2000, 0, 1, 0, 0, 0)
-let db = require('./testdata/users.data')(rn)
+let db = require('./testdata/auth.data')(rn)
 function restoreDB() {
-  db = require('./testdata/users.data')(rn)
+  db = require('./testdata/auth.data')(rn)
 }
 
 AuthController.util.rightNow = () => { return rn }
@@ -26,7 +26,6 @@ AuthController.util.findOneUser = (q) => {
           let ks = k.split('.')
           let newO = usr[ks[0]]
           if (newO === undefined || (newO !== undefined && newO[ks[1]] !== v)) {
-            // console.log(newO[ks[1]])
             return false
           }
         }
@@ -83,7 +82,7 @@ describe('POST /auth', () => {
       body: { email: 'a@a.a', password: 'aaaaaaaa' },
       want: {
         code: 200,
-        body: { success: true, token: '{"token":"1"}' }
+        body: { success: true, token: '{"token":"5f9d628979c1b872f2a6a001"}' }
       }
     },
     { name: "Rejects on incorrect email",
@@ -236,7 +235,7 @@ describe('POST /auth/new', () => {
 describe('POST /auth/password', () => {
   var tests = [
     { name: "Correctly updates password",
-      auth: { token: '1' },
+      auth: { token: '5f9d628979c1b872f2a6a001' },
       body: { oldPassword: 'aaaaaaaa', newPassword: 'bbbbbbbb', confirmPassword: 'bbbbbbbb' },
       want: {
         code: 200,
@@ -244,7 +243,7 @@ describe('POST /auth/password', () => {
       }
     },
     { name: "Rejects if old is missing",
-      auth: { token: '1' },
+      auth: { token: '5f9d628979c1b872f2a6a001' },
       body: { newPassword: 'bbbbbbbb', confirmPassword: 'bbbbbbbb' },
       want: {
         code: 400,
@@ -252,7 +251,7 @@ describe('POST /auth/password', () => {
       }
     },
     { name: "Rejects if new is missing",
-      auth: { token: '1' },
+      auth: { token: '5f9d628979c1b872f2a6a001' },
       body: { oldPassword: 'aaaaaaaa', confirmPassword: 'bbbbbbbb' },
       want: {
         code: 400,
@@ -260,7 +259,7 @@ describe('POST /auth/password', () => {
       }
     },
     { name: "Rejects if new is too short",
-      auth: { token: '1' },
+      auth: { token: '5f9d628979c1b872f2a6a001' },
       body: { oldPassword: 'aaaaaaaa', newPassword: 'bbb', confirmPassword: 'bbb' },
       want: {
         code: 400,
@@ -268,7 +267,7 @@ describe('POST /auth/password', () => {
       }
     },
     { name: "Rejects if confirm is missing",
-      auth: { token: '1' },
+      auth: { token: '5f9d628979c1b872f2a6a001' },
       body: { oldPassword: 'bbbbbbbb', newPassword: 'bbbbbbbb' },
       want: {
         code: 400,
@@ -276,7 +275,7 @@ describe('POST /auth/password', () => {
       }
     },
     { name: "Rejects if confirm is not equal",
-      auth: { token: '1' },
+      auth: { token: '5f9d628979c1b872f2a6a001' },
       body: { oldPassword: 'bbbbbbbb', newPassword: 'bbbbbbbb', confirmPassword: 'cccccccc' },
       want: {
         code: 400,
@@ -284,7 +283,7 @@ describe('POST /auth/password', () => {
       }
     },
     { name: "Rejects if user not valid",
-      auth: { token: 'z' },
+      auth: { token: '5f9d628979c1b872f2a6a00z' },
       body: { oldPassword: 'bbbbbbbb', newPassword: 'bbbbbbbb', confirmPassword: 'bbbbbbbb' },
       want: {
         code: 400,

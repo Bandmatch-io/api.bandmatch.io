@@ -9,7 +9,18 @@ const Conversation = require('../Database/Models/Conversation')
 module.exports = () => {
   const router = express.Router()
 
-  router.get('/profile', UserController.getSelfUser)
+  router.get('/profile', async (req, res, next) => {
+    const me = req.user._id
+    if (!me) {
+      return res.status(401).json({ success: false, error: { login: { absent: true } } })
+    }
+
+    const result = await UserController.GetUser(me).catch(err => next(err))
+    if (!result.ok) {
+      return res.status(400).json({ success: false, error: result.error })
+    }
+    res.json({ success: true, user: result.doc })
+  })
 
   /**
    * ---
@@ -22,16 +33,67 @@ module.exports = () => {
    * ---
    * Resends the confirm email message
    */
-  router.get('/profile/confirm_token/:token', UserController.getProfileFromConfirmToken)
+  router.get('/profile/confirm_token/:token', async (req, res, next) => {
+    const token = req.params.token
 
+    if (!token) {
+      return res.status(400).json({ success: false, error: { token: { missing: true } } })
+    }
 
-  router.get('/profile/:id', UserController.getOtherUser)
+    const result = await UserController.GetProfileFromConfirmToken(token).catch(err => next(err))
+    if (!result.ok) {
+      return res.status(400).json({ success: false, error: result.error })
+    }
+    res.json({ success: true, user: result.doc })
+  })
 
-  router.get('/admins/list', UserController.getAdmins)
+  router.get('/profile/:id', async (req, res, next) => {
+    const usr = req.params.id
+    if (!usr) {
+      res.status(401).json({ success: false, error: { id: { missing: true } } })
+    }
 
-  router.patch('/profile', UserController.updateSelfUser)
+    const result = await UserController.GetUser(usr).catch(err => next(err))
+    if (!result.ok) {
+      return res.status(400).json({ success: false, error: result.error })
+    }
+    res.json({ success: true, user: result.doc })
+  })
 
-  router.patch('/password/request', UserController.requestNewPassword)
+  router.get('/admins/list', async (req, res, next) => {
+    const result = await UserController.GetAdmins().catch(err => next(err))
+    if (!result.ok) {
+      return res.status(400).json({ success: false })
+    }
+    res.json({ success: true, users: result.docs })
+  })
+
+  router.patch('/profile', async (req, res, next) => {
+    const me = req.user._id
+    if (!me) {
+      return res.status(401).json({ success: false, error: { login: { absent: true } } })
+    }
+
+    const result = await UserController.UpdateSelfUser(me, req.body).catch(err => next(err))
+    if (!result.ok) {
+      return res.status(400).json({ success: false, error: result.error })
+    }
+    res.json({ success: true, user: result.doc })
+  })
+
+  router.patch('/password/request', async (req, res, next) => {
+    const email = req.body.email
+
+    if (email === undefined) {
+      res.status(400).json({ success: false, error: { email: { missing: true } } })
+    }
+
+    const result = await UserController.RequestNewPassword(email).catch(err => next(err))
+    if (!result.ok) {
+      res.status(400).json({ success: false, error: result.error })
+    }
+    res.json({ success: true })
+  })
 
   /**
    * ---
@@ -44,7 +106,18 @@ module.exports = () => {
    * ---
    * Deletes the logged in user in the database
    */
-  router.delete('/', UserController.deleteUser)
+  router.delete('/', async (req, res, next) => {
+    const me = req.user._id
+    if (!me) {
+      return res.status(401).json({ success: false, error: { login: { absent: true } } })
+    }
+
+    const result = await UserController.DeleteUser(me).catch(err => next(err))
+    if (!result.ok) {
+      return res.status(400).json({ success: false, error: result.error })
+    }
+    res.json({ success: true })
+  })
 
   /**
    * ---
@@ -100,12 +173,23 @@ module.exports = () => {
    * ---
    * Resends the confirm email messag
    */
-  router.get('/confirm/resend', UserController.resendEmailVerification)
+  router.patch('/confirm/resend', async (req, res, next) => {
+    const userID = req.user._id
+    if (!userID) {
+      return res.status(401).json({ success: false, error: { login: { absent: true } } })
+    }
+
+    const result = await UserController.ResendEmailVerification(userID).catch(err => next(err))
+    if (!result.ok) {
+      res.status(400).json({ success: false, error: result.error })
+    }
+    res.json({ success: true })
+  })
 
   /**
    * ---
    * $route:
-   *  method: GET
+   *  method: POST
    *  endpoint: /users/confirm/:str
    * $params:
    *  str: The confirm email string
@@ -115,7 +199,23 @@ module.exports = () => {
    * ---
    * Renders the sign in page on invalid data
    */
-  router.get('/confirm/:str', UserController.confirmEmailAddress)
+  router.post('/confirm/:str', async (req, res, next) => {
+    const confString = req.params.str
+    const userID = req.user._id
+
+    if (!confString) {
+      return res.status(400).json({ success: false, error: { confirmToken: { missing: true } } })
+    }
+    if (!userID) {
+      return res.status(400).json({ success: false, error: { login: { absent: true } } })
+    }
+
+    const result = await UserController.ConfirmEmailAddress(confString, userID).catch(err => next(err))
+    if (!result.ok) {
+      return res.status(400).json({ success: false, error: result.error })
+    }
+    return res.json({ success: true })
+  })
 
   return router
 }
